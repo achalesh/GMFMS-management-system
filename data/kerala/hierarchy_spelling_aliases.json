@@ -1,0 +1,29 @@
+{
+  "panchayat": {
+    "G040502": "ambalappuzhasouth",
+    "G040503": "ambalappuzhanorth",
+    "G050306": "kumarakam",
+    "G050705": "pallikkathode",
+    "G050708": "manarcad",
+    "G051101": "erumeli",
+    "G060103": "bisonvalley",
+    "G060209": "edamalakudi",
+    "G070308": "malayattoorneeleeswaram",
+    "G080802": "vatanappally",
+    "G091101": "ayalur",
+    "G091106": "nemmara",
+    "G091207": "vadakkenchery",
+    "G100905": "kuttipuram",
+    "G101001": "abdurahimannagar",
+    "G140201": "bellur"
+  },
+  "block": {
+    "ambalappuzha": "ambalapuzha",
+    "mannarkad": "mannarkkad",
+    "nemmara": "nenmara",
+    "vatakara": "vadakara",
+    "kozhikkode": "kozhikode",
+    "manjesaram": "manjeshwar",
+    "nileswaram": "nileshwar"
+  }
+}

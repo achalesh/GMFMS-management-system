@@ -1,0 +1,57 @@
+name: gramaswaraj
+services:
+  database:
+    image: postgres:17-bookworm
+    env_file: deploy/database.env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [backend]
+  web:
+    build: .
+    image: gramaswaraj-web:local
+    env_file: deploy/web.env
+    ports: ["127.0.0.1:18000:8000"]
+    volumes:
+      - private_media:/data/private_media
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+    command: ["sh", "deploy/start.sh"]
+    healthcheck:
+      test: [CMD, python, deploy/healthcheck.py]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks: [backend]
+  release:
+    profiles: [tools]
+    build: .
+    image: gramaswaraj-web:local
+    env_file: deploy/migration.env
+    volumes:
+      - private_media:/data/private_media
+    depends_on:
+      database:
+        condition: service_healthy
+    command: ["sh", "deploy/release.sh"]
+    networks: [backend]
+volumes:
+  postgres_data:
+  private_media:
+networks:
+  backend:
+    ipam:
+      config:
+        - subnet: 172.30.80.0/24
+          gateway: 172.30.80.1

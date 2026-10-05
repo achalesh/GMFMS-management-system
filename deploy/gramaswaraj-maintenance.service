@@ -1,0 +1,9 @@
+[Unit]
+Description=Gramaswaraj expiry and retention maintenance
+Requires=docker.service
+After=docker.service
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/gramaswaraj
+ExecStart=/bin/sh /opt/gramaswaraj/deploy/maintenance.sh
+UMask=0077

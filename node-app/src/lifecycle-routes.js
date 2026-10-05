@@ -1,0 +1,21 @@
+import express from 'express';
+import {can,scopesFor} from './policies.js';
+import {budget} from './security.js';
+import {FormError,fields,slots} from './registration-fields.js';
+import {correctionChoices,requestCorrection,correctionTicket,applyCorrection,digest} from './corrections.js';
+import {registrySelect,facilitator,effectiveStatus,registryAction} from './registry.js';
+import {applicationSelect} from './registration-services.js';
+import {processUpload} from './uploads.js';
+export function correctionPublic(db,cfg){const r=express.Router();
+ r.get('/corrections/access/',(req,res)=>res.render('correction-access'));
+ r.post('/corrections/access/',async(req,res)=>{if(!await budget(db,cfg.secret,'correction-access',req.ip,20))throw new FormError('Please try again later.',429);if(typeof req.body.token!=='string'||!/^[a-f0-9]{64}$/.test(req.body.token))throw new FormError('Correction link unavailable.',410);const hash=digest(req.body.token);await correctionTicket(db,hash);req.session.correctionHash=hash;res.redirect('/corrections/edit/');});
+ async function render(req,res,error='',values){const t=await correctionTicket(db,req.session.correctionHash);const selected=Object.values(fields).flat().filter(f=>t.allowed.includes(f.name));const version=(await db.all('SELECT consent_version FROM gmf_registration_policy WHERE id=1'))[0].consent_version;res.render('correction-edit',{ticket:t,fields:selected,values:values||Object.assign({},t.data[2],t.data[3],t.data[4]),uploadSlots:slots.filter(s=>t.allowed.includes(s)),version,error});}
+ r.get('/corrections/edit/',async(req,res)=>render(req,res));
+ r.post('/corrections/edit/',async(req,res)=>{if(!await budget(db,cfg.secret,'correction-save',req.ip,30))throw new FormError('Please try again later.',429);try{const ticket=await correctionTicket(db,req.session.correctionHash),uploads={};for(const slot of Object.keys(req.files||{})){if(!ticket.allowed.includes(slot))throw new FormError('This file was not requested.');uploads[slot]=await processUpload(req.files[slot][0],slot==='photo',[50,50,1]);}await applyCorrection(db,req.session.correctionHash,req.body,uploads);delete req.session.correctionHash;res.render('correction-complete');}catch(e){if(!(e instanceof FormError)||e.status===410)throw e;res.status(e.status);await render(req,res,e.message,req.body);}});
+ return r;}
+export function lifecycleStaff(db,cfg){const r=express.Router();
+ r.post('/applications/:id/correction/',async(req,res)=>{const token=await requestCorrection(db,res.locals.user.id,req.params.id,req.body);if(!token)return res.redirect(`/applications/${req.params.id}/`);res.render('correction-link',{link:cfg.origin+'/corrections/access/#'+token,id:req.params.id});});
+ r.get('/facilitators/',async(req,res)=>{if(!res.locals.user.superuser&&!scopesFor(res.locals.user,'facilitators.view').length)throw new FormError('Access denied.',403);const rows=(await db.all(registrySelect+' ORDER BY f.number')).filter(f=>can(res.locals.user,'facilitators.view',f));res.render('facilitators',{rows,effectiveStatus});});
+ r.get('/facilitators/:id/',async(req,res)=>{const f=await facilitator(db,req.params.id,res.locals.user);const change=can(res.locals.user,'facilitators.change',f);const locations=change?(await db.all(`SELECT p.code,p.name,b.code AS block_code,d.code AS district_code FROM gmf_panchayats p JOIN gmf_blocks b ON b.code=p.block_code JOIN gmf_districts d ON d.code=b.district_code JOIN gmf_states s ON s.code=d.state_code WHERE p.active=1 AND b.active=1 AND d.active=1 AND s.active=1 ORDER BY d.name,p.name`)).filter(p=>can(res.locals.user,'facilitators.change',p)):[];const candidates=change?(await db.all(applicationSelect+" WHERE a.panchayat_code=? AND a.status='UNDER_REVIEW'",[f.panchayat_code])).filter(a=>can(res.locals.user,'applications.approve',a)):[];const history=await db.all('SELECT action,reason,snapshot,created_at FROM gmf_registry_history WHERE facilitator_id=? ORDER BY created_at',[f.id]);res.render('facilitator-detail',{f,change,locations,candidates,history,effectiveStatus});});
+ r.post('/facilitators/:id/',async(req,res)=>{await registryAction(db,res.locals.user.id,req.params.id,req.body);res.redirect(`/facilitators/${req.params.id}/`);});
+ return r;}

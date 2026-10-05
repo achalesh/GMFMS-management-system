@@ -1,0 +1,34 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {database} from '../src/database.js';
+import {migrate} from '../src/schema.js';
+import {seed} from '../src/seed.js';
+import {newDraft,saveStep,submit,reviewAction} from '../src/registration-services.js';
+import {requestCorrection,correctionTicket,applyCorrection,digest} from '../src/corrections.js';
+import {registryAction,expireFacilitators,today} from '../src/registry.js';
+async function setup(){const db=await database({sqlite:':memory:'});await migrate(db);await seed(db);await db.run("INSERT INTO gmf_users(id,username,email,password_hash,superuser) VALUES ('admin','admin','admin@example.invalid','unused',1)");return db;}
+async function application(db){const id=await newDraft(db);await saveStep(db,id,1,1,{district:'TVM',block:'B01011',panchayat:'G01071'});await saveStep(db,id,2,2,{full_name:'Synthetic Applicant',mobile:'9876543210',address:'Test address',pin_code:'695001'});await saveStep(db,id,3,3,{years_experience:'0',languages:'Malayalam'});await saveStep(db,id,4,4,{});await saveStep(db,id,5,5,{}, {photo:{mime:'image/jpeg',body:'test-fixture',sha256:'test-fixture'}});await submit(db,id,6,{accuracy:'on',processing:'on',consent_version:'1.0'});await reviewAction(db,'admin',id,{action:'start_review',revision:1});return id;}
+const decision={action:'approve',revision:2,role:'PRIMARY',verified:'on',acknowledge:'on',reason:'Synthetic records verified.'};
+test('correction tickets restrict fields, require consent, expire, rotate, cancel and prevent replay',async()=>{const db=await setup();try{
+ const id=await application(db);const token=await requestCorrection(db,'admin',id,{action:'request_correction',revision:2,reason:'Correct your name.',allowed_fields:['full_name']});const hash=digest(token);assert.equal((await correctionTicket(db,hash)).revision,3);
+ await assert.rejects(applyCorrection(db,hash,{revision:3,full_name:'Corrected Name'}));
+ await applyCorrection(db,hash,{revision:3,full_name:'Corrected Name',mobile:'8888888888',accuracy:'on',processing:'on',consent_version:'1.0'});
+ const a=(await db.all('SELECT * FROM gmf_applications WHERE id=?',[id]))[0];assert.equal(a.status,'SUBMITTED');assert.equal(a.full_name,'Corrected Name');assert.equal(a.mobile,'9876543210');await assert.rejects(correctionTicket(db,hash));
+ await reviewAction(db,'admin',id,{action:'start_review',revision:4});const old=await requestCorrection(db,'admin',id,{action:'request_correction',revision:5,reason:'Correct address.',allowed_fields:'address'});const fresh=await requestCorrection(db,'admin',id,{action:'renew_correction',revision:6,reason:'Renewed instructions.'});await assert.rejects(correctionTicket(db,digest(old)));assert(await correctionTicket(db,digest(fresh)));await db.run('UPDATE gmf_corrections SET expires_at=0 WHERE digest=?',[digest(fresh)]);await assert.rejects(correctionTicket(db,digest(fresh)));await requestCorrection(db,'admin',id,{action:'cancel_correction',revision:7,reason:'Cancelled request.'});assert.equal((await db.all('SELECT status FROM gmf_applications WHERE id=?',[id]))[0].status,'UNDER_REVIEW');
+ }finally{await db.close();}});
+test('registry protects revision, primary occupancy, destination scope, expiry and terminal states',async()=>{const db=await setup();try{
+ const app=await application(db);await reviewAction(db,'admin',app,decision);const f=(await db.all('SELECT * FROM gmf_facilitators'))[0];
+ await registryAction(db,'admin',f.id,{action:'suspend',revision:1,reason:'Test suspension.'});assert.equal((await db.all('SELECT primary_key FROM gmf_facilitators WHERE id=?',[f.id]))[0].primary_key,null);await assert.rejects(registryAction(db,'admin',f.id,{action:'reactivate',revision:1,reason:'Stale request.'}));
+ const candidate=await application(db);await reviewAction(db,'admin',candidate,decision);await assert.rejects(registryAction(db,'admin',f.id,{action:'reactivate',revision:2,reason:'Conflict.'}));
+ const other=(await db.all('SELECT id FROM gmf_facilitators WHERE application_id=?',[candidate]))[0];await registryAction(db,'admin',other.id,{action:'revoke',revision:1,reason:'Test revocation.'});await assert.rejects(registryAction(db,'admin',other.id,{action:'renew',revision:2,reason:'Terminal record.'}));
+ await registryAction(db,'admin',f.id,{action:'reactivate',revision:2,reason:'Conflict resolved.'});
+ await db.run("INSERT INTO gmf_users(id,username,email,password_hash) VALUES ('district','district','district@example.invalid','unused')");await db.run("INSERT INTO gmf_scopes(id,user_id,role,scope,district_code) VALUES ('scope','district','DISTRICT_ADMIN','DISTRICT','TVM')");
+ await assert.rejects(registryAction(db,'district',f.id,{action:'transfer',revision:3,panchayat:'G14020',reason:'Out of scope.'}));await registryAction(db,'district',f.id,{action:'transfer',revision:3,panchayat:'G01069',reason:'Transfer within district.'});
+ await registryAction(db,'admin',f.id,{action:'role',revision:4,role:'ASSISTANT',reason:'Role change.'});await registryAction(db,'admin',f.id,{action:'resign',revision:5,reason:'Resignation.'});await registryAction(db,'admin',f.id,{action:'reactivate',revision:6,reason:'New appointment.'});
+ await db.run("UPDATE gmf_facilitators SET valid_until='2020-01-01' WHERE id=?",[f.id]);assert.equal(await expireFacilitators(db),1);assert.equal(await expireFacilitators(db),0);const date=new Date(today());date.setUTCDate(date.getUTCDate()+365);await registryAction(db,'admin',f.id,{action:'renew',revision:8,valid_until:date.toISOString().slice(0,10),reason:'Renew expired identity.'});assert.equal((await db.all('SELECT status FROM gmf_facilitators WHERE id=?',[f.id]))[0].status,'ACTIVE');
+ }finally{await db.close();}});
+test('replacement is atomic when approval fails and freezes predecessor after success',async()=>{const db=await setup();try{
+ const original=await application(db);await reviewAction(db,'admin',original,decision);const f=(await db.all('SELECT id FROM gmf_facilitators'))[0];const replacement=await application(db);const input={action:'replace',revision:1,replacement_id:replacement,application_revision:2,reason:'Replace test record.',verified:'on',acknowledge:'on'};
+ await assert.rejects(registryAction(db,'admin',f.id,{...input,verified:''}));assert.equal((await db.all('SELECT status FROM gmf_facilitators WHERE id=?',[f.id]))[0].status,'ACTIVE');assert.equal((await db.all('SELECT COUNT(*) AS n FROM gmf_facilitators'))[0].n,1);
+ await registryAction(db,'admin',f.id,input);assert.equal((await db.all('SELECT status FROM gmf_facilitators WHERE id=?',[f.id]))[0].status,'REPLACED');assert.equal((await db.all('SELECT COUNT(*) AS n FROM gmf_facilitators WHERE primary_key IS NOT NULL'))[0].n,1);await assert.rejects(registryAction(db,'admin',f.id,{action:'reactivate',revision:2,reason:'Cannot restore predecessor.'}));
+ }finally{await db.close();}});

@@ -1,0 +1,10 @@
+[Unit]
+Description=Gramaswaraj encrypted database and media backup
+Requires=docker.service
+After=docker.service
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/gramaswaraj
+EnvironmentFile=/etc/gramaswaraj/backup.env
+ExecStart=/bin/bash /opt/gramaswaraj/deploy/backup.sh
+UMask=0077

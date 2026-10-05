@@ -1,0 +1,42 @@
+# Install inside nginx's http context (e.g. /etc/nginx/conf.d/gramaswaraj.conf).
+# Replace gramaswaraj.in and provision the certificate BEFORE nginx -t/reload.
+log_format gmfms_safe '$time_iso8601 method=$request_method status=$status bytes=$body_bytes_sent duration=$request_time';
+server {
+    listen 80;
+    server_name gramaswaraj.in;
+    if ($host != gramaswaraj.in) { return 444; }
+    access_log /var/log/nginx/gramaswaraj-access.log gmfms_safe;
+    error_log /dev/null crit;
+    location /.well-known/acme-challenge/ { root /var/www/certbot; }
+    location / { return 301 https://gramaswaraj.in$request_uri; }
+}
+server {
+    listen 443 ssl;
+    server_name gramaswaraj.in;
+    if ($host != gramaswaraj.in) { return 444; }
+    ssl_certificate /etc/letsencrypt/live/gramaswaraj.in/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/gramaswaraj.in/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    client_max_body_size 100m;
+    client_body_timeout 30s;
+    send_timeout 60s;
+    access_log /var/log/nginx/gramaswaraj-access.log gmfms_safe;
+    # Nginx error logs may include raw request URIs. Disable site-level error logging;
+    # monitor status counters/health and sanitized application logs instead.
+    error_log /dev/null crit;
+    location / {
+        proxy_pass http://127.0.0.1:18000;
+        proxy_set_header Host gramaswaraj.in;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_connect_timeout 10s;
+        proxy_read_timeout 130s;
+        proxy_send_timeout 130s;
+        proxy_no_cache 1;
+        proxy_cache_bypass 1;
+    }
+    location /internal/ { return 404; }
+    location ~ ^/(private-media|private_media|artifacts|deploy)/ { return 404; }
+    location ~ /\. { deny all; }
+}

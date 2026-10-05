@@ -1,0 +1,37 @@
+export const schemaVersion=6;
+export async function migrate(db){
+ const tables=[
+ `CREATE TABLE IF NOT EXISTS gmf_account_meta (id VARCHAR(36) PRIMARY KEY, revision INTEGER NOT NULL DEFAULT 1, must_change INTEGER NOT NULL DEFAULT 0)`,
+ `CREATE TABLE IF NOT EXISTS gmf_settings (id VARCHAR(20) PRIMARY KEY, revision INTEGER NOT NULL DEFAULT 1, payload TEXT NOT NULL)`,
+ `CREATE TABLE IF NOT EXISTS gmf_audit_details (id VARCHAR(36) PRIMARY KEY, entity VARCHAR(150) NOT NULL, reason VARCHAR(2000) NOT NULL, changes TEXT NOT NULL)`,
+ `CREATE TABLE IF NOT EXISTS gmf_report_exports (id VARCHAR(36) PRIMARY KEY, actor_id VARCHAR(36) NOT NULL, report VARCHAR(30) NOT NULL, format VARCHAR(10) NOT NULL, row_count INTEGER NOT NULL, filters TEXT NOT NULL, reason VARCHAR(500) NOT NULL, created_at BIGINT NOT NULL)`,
+ `CREATE TABLE IF NOT EXISTS gmf_verification (facilitator_id VARCHAR(36) PRIMARY KEY, token VARCHAR(64) NOT NULL UNIQUE)`,
+ `CREATE TABLE IF NOT EXISTS gmf_cards (id VARCHAR(36) PRIMARY KEY, facilitator_id VARCHAR(36) NOT NULL, number VARCHAR(64) NOT NULL UNIQUE, version INTEGER NOT NULL, token VARCHAR(64) NOT NULL UNIQUE, status VARCHAR(20) NOT NULL DEFAULT 'ISSUED', source_hash VARCHAR(64) NOT NULL, snapshot TEXT NOT NULL, pdf MEDIUMTEXT NOT NULL, print_pdf MEDIUMTEXT NOT NULL, pdf_hash VARCHAR(64) NOT NULL, print_hash VARCHAR(64) NOT NULL, issued_on VARCHAR(10) NOT NULL, valid_until VARCHAR(10) NOT NULL, UNIQUE(facilitator_id,version))`,
+ `CREATE TABLE IF NOT EXISTS gmf_card_events (id VARCHAR(36) PRIMARY KEY, facilitator_id VARCHAR(36) NOT NULL, card_id VARCHAR(36), actor_id VARCHAR(36) NOT NULL, action VARCHAR(40) NOT NULL, reason TEXT NOT NULL, created_at BIGINT NOT NULL)`,
+ `CREATE TABLE IF NOT EXISTS gmf_corrections (id VARCHAR(36) PRIMARY KEY, application_id VARCHAR(36) NOT NULL, digest VARCHAR(64) NOT NULL UNIQUE, fields TEXT NOT NULL, message TEXT NOT NULL, expires_at BIGINT NOT NULL, used INTEGER NOT NULL DEFAULT 0)`,
+ `CREATE TABLE IF NOT EXISTS gmf_registry_meta (id VARCHAR(36) PRIMARY KEY, revision INTEGER NOT NULL DEFAULT 1, ended INTEGER NOT NULL DEFAULT 0, reference VARCHAR(150) NOT NULL DEFAULT '', notes TEXT NOT NULL)`,
+ `CREATE TABLE IF NOT EXISTS gmf_registry_history (id VARCHAR(36) PRIMARY KEY, facilitator_id VARCHAR(36) NOT NULL, actor_id VARCHAR(36), action VARCHAR(40) NOT NULL, reason TEXT NOT NULL, snapshot TEXT NOT NULL, created_at BIGINT NOT NULL)`,
+ `CREATE TABLE IF NOT EXISTS gmf_registration_policy (id INTEGER PRIMARY KEY, app_sequence INTEGER NOT NULL DEFAULT 0, prefix VARCHAR(12) NOT NULL DEFAULT 'GS-MF', validity_days INTEGER NOT NULL DEFAULT 365, consent_version VARCHAR(30) NOT NULL DEFAULT '1.0')`,
+ `CREATE TABLE IF NOT EXISTS gmf_drafts (id VARCHAR(36) PRIMARY KEY, payload TEXT NOT NULL, completed INTEGER NOT NULL DEFAULT 0, revision INTEGER NOT NULL DEFAULT 1, expires_at BIGINT NOT NULL, submitted INTEGER NOT NULL DEFAULT 0)`,
+ `CREATE TABLE IF NOT EXISTS gmf_uploads (owner_id VARCHAR(36) NOT NULL, slot VARCHAR(40) NOT NULL, mime VARCHAR(40) NOT NULL, body MEDIUMTEXT NOT NULL, sha256 VARCHAR(64) NOT NULL, PRIMARY KEY(owner_id,slot))`,
+ `CREATE TABLE IF NOT EXISTS gmf_applications (id VARCHAR(36) PRIMARY KEY, number VARCHAR(40) NOT NULL UNIQUE, panchayat_code VARCHAR(30) NOT NULL, payload TEXT NOT NULL, full_name VARCHAR(150) NOT NULL, normalized_name VARCHAR(150) NOT NULL, mobile VARCHAR(10) NOT NULL, email VARCHAR(254) NOT NULL, status VARCHAR(30) NOT NULL DEFAULT 'SUBMITTED', revision INTEGER NOT NULL DEFAULT 1, submitted_at BIGINT NOT NULL)`,
+ `CREATE TABLE IF NOT EXISTS gmf_review_events (id VARCHAR(36) PRIMARY KEY, application_id VARCHAR(36) NOT NULL, actor_id VARCHAR(36) NOT NULL, action VARCHAR(40) NOT NULL, from_status VARCHAR(30) NOT NULL, to_status VARCHAR(30) NOT NULL, reason TEXT NOT NULL, created_at BIGINT NOT NULL)`,
+ `CREATE TABLE IF NOT EXISTS gmf_facilitator_sequences (district_code VARCHAR(30) PRIMARY KEY, value INTEGER NOT NULL DEFAULT 0)`,
+ `CREATE TABLE IF NOT EXISTS gmf_facilitators (id VARCHAR(36) PRIMARY KEY, application_id VARCHAR(36) NOT NULL UNIQUE, number VARCHAR(50) NOT NULL UNIQUE, panchayat_code VARCHAR(30) NOT NULL, full_name VARCHAR(150) NOT NULL, role VARCHAR(20) NOT NULL, status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE', valid_until VARCHAR(10) NOT NULL, primary_key VARCHAR(30) UNIQUE, approved_by VARCHAR(36) NOT NULL, approved_at BIGINT NOT NULL)`,
+ `CREATE TABLE IF NOT EXISTS gmf_schema (version INTEGER PRIMARY KEY)`,
+ `CREATE TABLE IF NOT EXISTS gmf_states (code VARCHAR(10) PRIMARY KEY, name VARCHAR(150) NOT NULL, active INTEGER NOT NULL DEFAULT 1)`,
+ `CREATE TABLE IF NOT EXISTS gmf_districts (code VARCHAR(30) PRIMARY KEY, state_code VARCHAR(10) NOT NULL, name VARCHAR(150) NOT NULL, name_ml VARCHAR(180) NOT NULL, active INTEGER NOT NULL DEFAULT 1, FOREIGN KEY(state_code) REFERENCES gmf_states(code))`,
+ `CREATE TABLE IF NOT EXISTS gmf_blocks (code VARCHAR(30) PRIMARY KEY, district_code VARCHAR(30) NOT NULL, name VARCHAR(150) NOT NULL, name_ml VARCHAR(180) NOT NULL, active INTEGER NOT NULL DEFAULT 1, FOREIGN KEY(district_code) REFERENCES gmf_districts(code))`,
+ `CREATE TABLE IF NOT EXISTS gmf_panchayats (code VARCHAR(30) PRIMARY KEY, block_code VARCHAR(30) NOT NULL, name VARCHAR(150) NOT NULL, name_ml VARCHAR(180) NOT NULL, active INTEGER NOT NULL DEFAULT 1, FOREIGN KEY(block_code) REFERENCES gmf_blocks(code))`,
+ `CREATE TABLE IF NOT EXISTS gmf_users (id VARCHAR(36) PRIMARY KEY, username VARCHAR(150) NOT NULL UNIQUE, email VARCHAR(254) NOT NULL UNIQUE, password_hash VARCHAR(512) NOT NULL, active INTEGER NOT NULL DEFAULT 1, superuser INTEGER NOT NULL DEFAULT 0)`,
+ `CREATE TABLE IF NOT EXISTS gmf_scopes (id VARCHAR(36) PRIMARY KEY, user_id VARCHAR(36) NOT NULL, role VARCHAR(30) NOT NULL, scope VARCHAR(10) NOT NULL, district_code VARCHAR(30), block_code VARCHAR(30), active INTEGER NOT NULL DEFAULT 1, FOREIGN KEY(user_id) REFERENCES gmf_users(id), FOREIGN KEY(district_code) REFERENCES gmf_districts(code), FOREIGN KEY(block_code) REFERENCES gmf_blocks(code))`,
+ `CREATE TABLE IF NOT EXISTS gmf_sessions (id VARCHAR(128) PRIMARY KEY, payload TEXT NOT NULL, expires_at BIGINT NOT NULL)`,
+ `CREATE TABLE IF NOT EXISTS gmf_budgets (id VARCHAR(64) PRIMARY KEY, hits INTEGER NOT NULL DEFAULT 0, expires_at BIGINT NOT NULL)`,
+ `CREATE TABLE IF NOT EXISTS gmf_audit (id VARCHAR(36) PRIMARY KEY, user_id VARCHAR(36), action VARCHAR(100) NOT NULL, created_at BIGINT NOT NULL)`
+ ];
+ for(const sql of tables)await db.run(sql);
+ await db.run('INSERT OR IGNORE INTO gmf_registration_policy(id) VALUES (1)');
+ await db.run("INSERT OR IGNORE INTO gmf_settings(id,payload) VALUES ('organization','{}')");
+ await db.run("INSERT OR IGNORE INTO gmf_settings(id,payload) VALUES ('system','{}')");
+ await db.run('INSERT OR IGNORE INTO gmf_schema(version) VALUES (?)',[schemaVersion]);
+}

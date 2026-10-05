@@ -1,0 +1,501 @@
+{
+  "retrieved_on": "2026-09-28",
+  "counts": {
+    "districts": 14,
+    "blocks": 152,
+    "panchayats": 941
+  },
+  "sources": [
+    {
+      "url": "https://sec.kerala.gov.in/public/cnstncy",
+      "file": "sec-index.html",
+      "sha256": "b9718d26d37b530fdb85d83d905c523080ffd83061a327319f187a971c3bd776"
+    },
+    {
+      "url": "https://sec.kerala.gov.in/public/cnstncy/lb/da39a3ee5e6b4b0d3255bfef95601890af14/G",
+      "file": "sec-01-G.html",
+      "sha256": "82452fc705da8ad697e8e8ff25184fb0f006cae32617c9526905050f7a0f02a5"
+    },
+    {
+      "url": "https://sec.kerala.gov.in/public/cnstncy/lb/da39a3ee5e6b4b0d3255bfef95601890af14/B",
+      "file": "sec-01-B.html",
+      "sha256": "2b430ba185a844854374d7c276b98ee35ddea2cc66bf75ce75d47e34c946e5da"
+    },
+    {
+      "url": "https://sec.kerala.gov.in/public/cnstncy/lb/da39a3ee5e6b4b0d3255bfef95601890af13/G",
+      "file": "sec-02-G.html",
+      "sha256": "022ca44316880b0bfa41eef0cdd727cb73cd8cab646c5adc228e7d18d181e3e5"
+    },
+    {
+      "url": "https://sec.kerala.gov.in/public/cnstncy/lb/da39a3ee5e6b4b0d3255bfef95601890af13/B",
+      "file": "sec-02-B.html",
+      "sha256": "dd8ea19e55f943be609f028435b0726c062cbe69ccb967d4e71fc2f4039ab021"
+    },
+    {
+      "url": "https://sec.kerala.gov.in/public/cnstncy/lb/da39a3ee5e6b4b0d3255bfef95601890af12/G",
+      "file": "sec-03-G.html",
+      "sha256": "a17dc77b231fcda3d91535ef6cabc4ab135930147a12bdfa01e6c2a058b5c993"
+    },
+    {
+      "url": "https://sec.kerala.gov.in/public/cnstncy/lb/da39a3ee5e6b4b0d3255bfef95601890af12/B",
+      "file": "sec-03-B.html",
+      "sha256": "b4352d5916a9e0f32c63247f8a9c16e9807749962d07b8110c9c334b62278c3f"
+    },
+    {
+      "url": "https://sec.kerala.gov.in/public/cnstncy/lb/da39a3ee5e6b4b0d3255bfef95601890af11/G",
+      "file": "sec-04-G.html",
+      "sha256": "810262c15ee0eeab7ea9caf77d53f83ebe2ee53e8b7469b11ed2cc2320873860"
+    },
+    {
+      "url": "https://sec.kerala.gov.in/public/cnstncy/lb/da39a3ee5e6b4b0d3255bfef95601890af11/B",
+      "file": "sec-04-B.html",
+      "sha256": "bba4df35382b720e1ba0733577043bf2ca6fcf83d35f595930ceb72160ad2aa9"
+    },
+    {
+      "url": "https://sec.kerala.gov.in/public/cnstncy/lb/da39a3ee5e6b4b0d3255bfef95601890af10/G",
+      "file": "sec-05-G.html",
+      "sha256": "f77a9e67a54858f59bf12e780273440e7fae8705f5fafe87b302325c9e88adac"
+    },
+    {
+      "url": "https://sec.kerala.gov.in/public/cnstncy/lb/da39a3ee5e6b4b0d3255bfef95601890af10/B",
+      "file": "sec-05-B.html",
+      "sha256": "55cf6dabea0047e4e9f847adc603c82115f956dc0fdb1efe526f43f850f2f883"
+    },
+    {
+      "url": "https://sec.kerala.gov.in/public/cnstncy/lb/da39a3ee5e6b4b0d3255bfef95601890afd9/G",
+      "file": "sec-06-G.html",
+      "sha256": "382a7b41d4bc9b0454ec187cada920d17c49a147a02a670b0c9be3a9aa0bcf5d"
+    },
+    {
+      "url": "https://sec.kerala.gov.in/public/cnstncy/lb/da39a3ee5e6b4b0d3255bfef95601890afd9/B",
+      "file": "sec-06-B.html",
+      "sha256": "2868fe41e732559f756fe750fffd9e52bb507279c475a146f07e6ecb82618618"
+    },
+    {
+      "url": "https://sec.kerala.gov.in/public/cnstncy/lb/da39a3ee5e6b4b0d3255bfef95601890afd8/G",
+      "file": "sec-07-G.html",
+      "sha256": "31f1f943867294fc694631d1e2a47b0fe6805e1ba0805f675b5715843bb3d3bd"
+    },
+    {
+      "url": "https://sec.kerala.gov.in/public/cnstncy/lb/da39a3ee5e6b4b0d3255bfef95601890afd8/B",
+      "file": "sec-07-B.html",
+      "sha256": "f81a7d5268aec213aa05372b86732e7b2fa9a2d06fb48cc6492e5aeecf3e4926"
+    },
+    {
+      "url": "https://sec.kerala.gov.in/public/cnstncy/lb/da39a3ee5e6b4b0d3255bfef95601890afd7/G",
+      "file": "sec-08-G.html",
+      "sha256": "b8e1be6083f216593ac0a547417bf67995ba770a592da70379bbfcacbcb49025"
+    },
+    {
+      "url": "https://sec.kerala.gov.in/public/cnstncy/lb/da39a3ee5e6b4b0d3255bfef95601890afd7/B",
+      "file": "sec-08-B.html",
+      "sha256": "27d915b55a94ed0de38e213e3e90cd0884565fc86418d3439a9d16c8c31bf539"
+    },
+    {
+      "url": "https://sec.kerala.gov.in/public/cnstncy/lb/da39a3ee5e6b4b0d3255bfef95601890afd6/G",
+      "file": "sec-09-G.html",
+      "sha256": "16fe8179da9a45afb9bcecf6bb2dac488f0ce5979e019ca6c0c470fc4e671061"
+    },
+    {
+      "url": "https://sec.kerala.gov.in/public/cnstncy/lb/da39a3ee5e6b4b0d3255bfef95601890afd6/B",
+      "file": "sec-09-B.html",
+      "sha256": "00bbbbb19b0de1838ceab12bd78253aa9ee78631ead40fb9def17247cbbb1c71"
+    },
+    {
+      "url": "https://sec.kerala.gov.in/public/cnstncy/lb/da39a3ee5e6b4b0d3255bfef95601890afd5/G",
+      "file": "sec-10-G.html",
+      "sha256": "2443bdfa1407c8447c72b5ca8ea972433c7c6af01ee52016f29649416da93128"
+    },
+    {
+      "url": "https://sec.kerala.gov.in/public/cnstncy/lb/da39a3ee5e6b4b0d3255bfef95601890afd5/B",
+      "file": "sec-10-B.html",
+      "sha256": "870e030c131719d1076dcbd1ede2364f02a3d1384c4bf5a258fb3a272301d196"
+    },
+    {
+      "url": "https://sec.kerala.gov.in/public/cnstncy/lb/da39a3ee5e6b4b0d3255bfef95601890afd4/G",
+      "file": "sec-11-G.html",
+      "sha256": "9a2c2882c3d0478a85cd24c7f229eeac525a2edf541c0827568567f94e809591"
+    },
+    {
+      "url": "https://sec.kerala.gov.in/public/cnstncy/lb/da39a3ee5e6b4b0d3255bfef95601890afd4/B",
+      "file": "sec-11-B.html",
+      "sha256": "05a1c9668c793c9fed16d8b34c3411703a282c13b53b8f3aaa12c68938249f0c"
+    },
+    {
+      "url": "https://sec.kerala.gov.in/public/cnstncy/lb/da39a3ee5e6b4b0d3255bfef95601890afd3/G",
+      "file": "sec-12-G.html",
+      "sha256": "cbf242e59e92c71a357e2f763adaabf24810c0d4ec10712e1039cf51edabe7a4"
+    },
+    {
+      "url": "https://sec.kerala.gov.in/public/cnstncy/lb/da39a3ee5e6b4b0d3255bfef95601890afd3/B",
+      "file": "sec-12-B.html",
+      "sha256": "ffc73ff5c133137b9dd3a34cdf91081d11d48f6f914b2b7534cadf66428b122f"
+    },
+    {
+      "url": "https://sec.kerala.gov.in/public/cnstncy/lb/da39a3ee5e6b4b0d3255bfef95601890afd2/G",
+      "file": "sec-13-G.html",
+      "sha256": "4a69e16264a0aa36069ce4c003b2db2b07e9d61a50e56d88b6d8d0a11627b597"
+    },
+    {
+      "url": "https://sec.kerala.gov.in/public/cnstncy/lb/da39a3ee5e6b4b0d3255bfef95601890afd2/B",
+      "file": "sec-13-B.html",
+      "sha256": "70fe6ad4df76bb3bbc9a301b4c717e0ed5d1fdd0fc99dbdb117ab93b54a39c36"
+    },
+    {
+      "url": "https://sec.kerala.gov.in/public/cnstncy/lb/da39a3ee5e6b4b0d3255bfef95601890afd1/G",
+      "file": "sec-14-G.html",
+      "sha256": "d7d87021f16139109f2b79ef289ad5b464cf95e86511927a66557e4c132250a8"
+    },
+    {
+      "url": "https://sec.kerala.gov.in/public/cnstncy/lb/da39a3ee5e6b4b0d3255bfef95601890afd1/B",
+      "file": "sec-14-B.html",
+      "sha256": "725a4b3573d4184db93ab428a4ccbf13136a0f445ba0eb4639c9729a313eb18c"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/1/0",
+      "file": "lsg-01-0.html",
+      "sha256": "b93f533d9b04e52475e8607c197c8a81693dfd3b339cdbeee11845488f09102f"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/2/0",
+      "file": "lsg-02-0.html",
+      "sha256": "1d0b45fb94a92ec7e0e6bba13fee3d4194137d42a925b89bee9291b76507aa1f"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/3/0",
+      "file": "lsg-03-0.html",
+      "sha256": "bb60916563e57b15b591073775a29f043825d6d5d73dd5c6171b74d65e68544b"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/4/0",
+      "file": "lsg-04-0.html",
+      "sha256": "a4b6676259c4faba9edb1a235b575e0a89a2b54b2383cdc26f5f461d6b4ff729"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/5/0",
+      "file": "lsg-05-0.html",
+      "sha256": "328618eeffec862def0ed38b972de6f3853d6c16ae664d0d4a3c80731858b214"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/6/0",
+      "file": "lsg-06-0.html",
+      "sha256": "6d4af96c56c0ddc7852e4277f7af5ef11d9df83eda9b90c9818c875821ae4b93"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/7/0",
+      "file": "lsg-07-0.html",
+      "sha256": "da36bdeaf9e827610f21f5df62d5c449f548e089d54a7a7267d3c1410cea7112"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/8/0",
+      "file": "lsg-08-0.html",
+      "sha256": "bdb7ce54147853a599a909332e48261bb8ef7fe26c90333eb4f194d8c6b84a18"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/9/0",
+      "file": "lsg-09-0.html",
+      "sha256": "7157d005218a507c48e1551f40167ab80786e02b6f3039178cfae963b0afd51a"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/10/0",
+      "file": "lsg-10-0.html",
+      "sha256": "9c666d929a6a1e88e2dbd30b813e8645b669c60eb81ad953fcad9ea0ad04cbdd"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/11/0",
+      "file": "lsg-11-0.html",
+      "sha256": "8b18b263e862a43e27bef1e94e5691b95c6c8d6f1a5c93af11322fdd2011d4b5"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/12/0",
+      "file": "lsg-12-0.html",
+      "sha256": "6b7efa51187a59a508c3809dd0c87d5394340696e0b7b52512fa74c29b282863"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/13/0",
+      "file": "lsg-13-0.html",
+      "sha256": "a0b6705bd306ef1a6c09f5b13494786444bccc8a951bdf612039e367dae79f36"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/14/0",
+      "file": "lsg-14-0.html",
+      "sha256": "1a40847ce26136a10995250fcef0dfa5763958930ec8f70431c822a2024467b8"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/1/0?page=%2C%2C%2C%2C1",
+      "file": "lsg-01-1.html",
+      "sha256": "a5ddb3ccc9eecf722add2c9578778b6292151623b5117f95ed60e353b2abdc53"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/1/0?page=%2C%2C%2C%2C2",
+      "file": "lsg-01-2.html",
+      "sha256": "def759bea40da07e6ecaecddd45f12b636f972c4decd88a047812bf944c14328"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/1/0?page=%2C%2C%2C%2C3",
+      "file": "lsg-01-3.html",
+      "sha256": "eca10b878b875a91d8d9848bbbf17d93cf983ee1a456b22b5a5387120b1346e2"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/1/0?page=%2C%2C%2C%2C4",
+      "file": "lsg-01-4.html",
+      "sha256": "56d36a926ab87d77e5008059d9ee93da63b57b0177427cf550ba7ed0afbc5e34"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/2/0?page=%2C%2C%2C%2C1",
+      "file": "lsg-02-1.html",
+      "sha256": "78b8179cb009db67288518e48ad0c766a244f27a15a51351c17ff18cc8fcb35e"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/2/0?page=%2C%2C%2C%2C2",
+      "file": "lsg-02-2.html",
+      "sha256": "e6f5593759d70821b67dc4703665cdcf066a6b293a8571294ec3e8c8caa0bb44"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/2/0?page=%2C%2C%2C%2C3",
+      "file": "lsg-02-3.html",
+      "sha256": "e8aad0f03e1d8df8600d2236f09c9f7a94db4831927cf572fa866b96021de395"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/2/0?page=%2C%2C%2C%2C4",
+      "file": "lsg-02-4.html",
+      "sha256": "3a3c8e3f2c3604aa45bc4bb29133917b859451d68aeb2a3da1404a84776cf991"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/3/0?page=%2C%2C%2C%2C1",
+      "file": "lsg-03-1.html",
+      "sha256": "77fd399d4cbdd63274e7d8f77e04954b9ed3a5a81b9e86ab3f9b6b96fee9f8aa"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/3/0?page=%2C%2C%2C%2C2",
+      "file": "lsg-03-2.html",
+      "sha256": "47cd35333a039c13671e8dfdb24f582a9b1af2c4ddff49c97a91710902cca3bd"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/3/0?page=%2C%2C%2C%2C3",
+      "file": "lsg-03-3.html",
+      "sha256": "45848b42f73c15065d55563e11ad429aefa2a15cd5dc726d39201248062e26f7"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/4/0?page=%2C%2C%2C%2C1",
+      "file": "lsg-04-1.html",
+      "sha256": "877410d78738c961f15b15ddd55591aba971932a8ee159be5f01054e7b18241e"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/4/0?page=%2C%2C%2C%2C2",
+      "file": "lsg-04-2.html",
+      "sha256": "90a0ad2a7ce6497a06d551fc8b43ee28ffa73bcdc4fa7d5ae226933730661c05"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/4/0?page=%2C%2C%2C%2C3",
+      "file": "lsg-04-3.html",
+      "sha256": "16c0f3b169251c3982e60facdbf861da9ba111e642a935dfc96c88a97e124f40"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/4/0?page=%2C%2C%2C%2C4",
+      "file": "lsg-04-4.html",
+      "sha256": "bf5beb12abbb35ef17905fee5ef06677f949f8158b4bfecb4575ec7edfe2ab13"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/5/0?page=%2C%2C%2C%2C1",
+      "file": "lsg-05-1.html",
+      "sha256": "a0bdb61f621119df924ffe019e497e31f3b6c46f7d711d289ccaf9bd0826f7eb"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/5/0?page=%2C%2C%2C%2C2",
+      "file": "lsg-05-2.html",
+      "sha256": "a3011ad581313d61de30570b0a3ae9799901c8d1b84afc97daa6cb5db6c710af"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/5/0?page=%2C%2C%2C%2C3",
+      "file": "lsg-05-3.html",
+      "sha256": "c573c84a90f587ae175ecae07a02e1e3067552ee4b1542dce453c646bc200265"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/5/0?page=%2C%2C%2C%2C4",
+      "file": "lsg-05-4.html",
+      "sha256": "5891f28e76ab4ec6b3cc3a4ed64303f6377991f02f387b5ec11d4eaa82f1b884"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/6/0?page=%2C%2C%2C%2C1",
+      "file": "lsg-06-1.html",
+      "sha256": "9b208572fa2630fc21b33e118374741f3c7063118d72a3fa30c1bf0ce5a1fe31"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/6/0?page=%2C%2C%2C%2C2",
+      "file": "lsg-06-2.html",
+      "sha256": "3862a153ed5612bd93de92e2dd316f5d10e5a9f358c47de11dec0534d6179f83"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/6/0?page=%2C%2C%2C%2C3",
+      "file": "lsg-06-3.html",
+      "sha256": "8c071b0c8f8f4d5ce89107d82e052758bbc1ce31ad79fa23e909d8dd94c3fb8d"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/7/0?page=%2C%2C%2C%2C1",
+      "file": "lsg-07-1.html",
+      "sha256": "4acb6d6507585d4ad2124b8b0db9203f6b2cd8a54642b5a3501c75dd3f375644"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/7/0?page=%2C%2C%2C%2C2",
+      "file": "lsg-07-2.html",
+      "sha256": "867d6a1aec5e7d96bb3e0c62111020d9f4807a0f12ab6dd8be61728196e7cebc"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/7/0?page=%2C%2C%2C%2C3",
+      "file": "lsg-07-3.html",
+      "sha256": "59ecb14f06777fa3eaeaac5e43d7b0abb0c7755c9e9d720c9137e1e817eb25a9"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/7/0?page=%2C%2C%2C%2C4",
+      "file": "lsg-07-4.html",
+      "sha256": "2f0b8360f84e56d3eb3f0831c85d49925d7f254a221f909e5f1ca1ed33653641"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/7/0?page=%2C%2C%2C%2C5",
+      "file": "lsg-07-5.html",
+      "sha256": "b8e64e22c0cf7756051631156445258cc04da980c69b07e7d60524dc414775e7"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/8/0?page=%2C%2C%2C%2C1",
+      "file": "lsg-08-1.html",
+      "sha256": "e74827abda8db37f2c62b0c3ea06db098b832b451b8f4c0971063fab56c09a75"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/8/0?page=%2C%2C%2C%2C2",
+      "file": "lsg-08-2.html",
+      "sha256": "e2ab16cf82f45aaee13bb1a686799eb0bf181cb18374e7707b4fb6da22523ffb"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/8/0?page=%2C%2C%2C%2C3",
+      "file": "lsg-08-3.html",
+      "sha256": "0adaed08d481725e85de1bdb01bef6eab116ffdd1314e93722eb1ac286ff9f50"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/8/0?page=%2C%2C%2C%2C4",
+      "file": "lsg-08-4.html",
+      "sha256": "982000a9fa437a8161b7ad9a2146279831281997fc1510b6e4ffd44fa5485015"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/8/0?page=%2C%2C%2C%2C5",
+      "file": "lsg-08-5.html",
+      "sha256": "3a34f3eb861655071c3eec04a6e910e6964fcf4df8d7e0147f5cbff352cab73b"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/9/0?page=%2C%2C%2C%2C1",
+      "file": "lsg-09-1.html",
+      "sha256": "8a633f4b5488105d63b8de2b1d661ca6af168db9b6199fe1472828df0313198d"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/9/0?page=%2C%2C%2C%2C2",
+      "file": "lsg-09-2.html",
+      "sha256": "f969ea32cca5a644ce37fd7ae7ac628cd784bcb160549b87cd61242db43f7a3f"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/9/0?page=%2C%2C%2C%2C3",
+      "file": "lsg-09-3.html",
+      "sha256": "311f03eaa597cd0247f97cf61777d042a976efc04ba1adc092adbc6d90dd847b"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/9/0?page=%2C%2C%2C%2C4",
+      "file": "lsg-09-4.html",
+      "sha256": "ff38264c538df2ff58f19473015262f4f0c0533eae7f7f8d7b8a804e9aa57fa7"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/9/0?page=%2C%2C%2C%2C5",
+      "file": "lsg-09-5.html",
+      "sha256": "236de3897af1f0f2f36c198674b1c778f0441275dbbbbced9f467b5dcc019803"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/10/0?page=%2C%2C%2C%2C1",
+      "file": "lsg-10-1.html",
+      "sha256": "97d5a30cea6ccc1330b46464d46b3a5bf5dde99668c66cd3e39073c1bb871525"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/10/0?page=%2C%2C%2C%2C2",
+      "file": "lsg-10-2.html",
+      "sha256": "1adfee1483b9f2b35e46a9881b363fe174dddb576ed2a7389a4ff9020fe962e0"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/10/0?page=%2C%2C%2C%2C3",
+      "file": "lsg-10-3.html",
+      "sha256": "4477ce053b0977a1fa30e59662956fe80ee6e1c6b7a24d709655430606adb6d4"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/10/0?page=%2C%2C%2C%2C4",
+      "file": "lsg-10-4.html",
+      "sha256": "57203b59e97a1bb48d51a135b417c03c5d9c07618fdc7a543260d5830823f935"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/10/0?page=%2C%2C%2C%2C5",
+      "file": "lsg-10-5.html",
+      "sha256": "f78f9dd85838e6ec2cf11729173f1f9a50762d3a165b30cb40434171dc4f0cdd"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/10/0?page=%2C%2C%2C%2C6",
+      "file": "lsg-10-6.html",
+      "sha256": "64f28919507b057ee562a242d4ea9de5640092a132f8a7b4a61cdffc15ddee85"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/11/0?page=%2C%2C%2C%2C1",
+      "file": "lsg-11-1.html",
+      "sha256": "f486f2145b446f7556a3f03023dde1e8f37bf1f63b460dcfac4b76063429e8c1"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/11/0?page=%2C%2C%2C%2C2",
+      "file": "lsg-11-2.html",
+      "sha256": "fb43787e44454b0a234b13f3b12ee70610112cc917d93afcaed8f880ed9d8e79"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/11/0?page=%2C%2C%2C%2C3",
+      "file": "lsg-11-3.html",
+      "sha256": "f9454ce933dc1daf42c5073272d585b26335a67d7ac6e211554f699095ff02b1"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/11/0?page=%2C%2C%2C%2C4",
+      "file": "lsg-11-4.html",
+      "sha256": "c9248443f54229ee372d1122fc4b87a1a8ba417f39ec36812664e8b375248878"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/12/0?page=%2C%2C%2C%2C1",
+      "file": "lsg-12-1.html",
+      "sha256": "125dfda520749b63d34e777d5f835492559cb6d0485a1699a6487e89a70d743e"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/13/0?page=%2C%2C%2C%2C1",
+      "file": "lsg-13-1.html",
+      "sha256": "9da906abf1861d3b601e9621231ddc8bde19e0309e2545bcc125220d94a86036"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/13/0?page=%2C%2C%2C%2C2",
+      "file": "lsg-13-2.html",
+      "sha256": "0900fb17be58c8ed04ecbe7336c8bf3ca311f7faa28abea131407eebd8a7278b"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/13/0?page=%2C%2C%2C%2C3",
+      "file": "lsg-13-3.html",
+      "sha256": "07074f05f6ac14e24a507e921f5ff1c308ade5ab3ed0a7f1ae67a001e59e7f13"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/13/0?page=%2C%2C%2C%2C4",
+      "file": "lsg-13-4.html",
+      "sha256": "2bee31fc83f9aef2631a1cfc482e4bb9a9c461cf69f4553f65c91c68758840e2"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/14/0?page=%2C%2C%2C%2C1",
+      "file": "lsg-14-1.html",
+      "sha256": "5fe54c3f59f921e9dc97c24c5fd87f43eb15ac309e5188dc0a93ec61482cf201"
+    },
+    {
+      "url": "https://lsgkerala.gov.in/en/website/input/14/0?page=%2C%2C%2C%2C2",
+      "file": "lsg-14-2.html",
+      "sha256": "0cc51712c2026242e663f0a86154d5b8fcc38b09556b67faba229e595f922a65"
+    }
+  ],
+  "hierarchy_reference": {
+    "url": "https://lsgkerala.gov.in/htm/PDF/Election2015/Lcalbodies_2015.pdf",
+    "sha256": "e7c18e7ab65438b22c17442f8a32aae7ec31ec0843c1f6f8446971d5aebb9e79",
+    "year": 2015
+  },
+  "csv_sha256": "665028d31071def32cb9870ed009492976113c0764f5af27b3846d3e98651e9b"
+}

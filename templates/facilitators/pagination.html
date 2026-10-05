@@ -1,0 +1,1 @@
+<nav class="registry-pagination" aria-label="Result pages">{% if page.has_previous %}<a href="?{{ filter_query }}&page={{ page.previous_page_number }}">← Previous</a>{% endif %}<span>Page {{ page.number }} of {{ page.paginator.num_pages }}</span>{% if page.has_next %}<a href="?{{ filter_query }}&page={{ page.next_page_number }}">Next →</a>{% endif %}</nav>

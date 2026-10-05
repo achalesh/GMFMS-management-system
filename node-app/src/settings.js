@@ -1,0 +1,3 @@
+export const organizationDefaults={application_name:'Gramaswaraj Media Facilitator Management System',short_name:'Gramaswaraj',name:'Kerala Grama Panchayat Association',network_name:'Digital Media & Broadcasting Network',address:'',phone:'',email:'',website:'',signatory_name:''};
+export const systemDefaults={registration_open:true,required_documents:[],allow_public_mobile:false,allow_public_email:false,allow_public_social:false};
+export async function settings(db,id){const row=(await db.all('SELECT revision,payload FROM gmf_settings WHERE id=?',[id]))[0];if(!row)throw Error('Settings schema unavailable');return {revision:row.revision,data:{...(id==='organization'?organizationDefaults:systemDefaults),...JSON.parse(row.payload)}};}

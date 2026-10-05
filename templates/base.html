@@ -1,0 +1,42 @@
+{% load static i18n %}<!doctype html>
+<html lang="{{ LANGUAGE_CODE|default:'en' }}"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Workspace{% endblock %} · {{ organization.short_name|default:"Gramaswaraj" }}</title>
+<link rel="icon" type="image/png" href="{% static 'img/gramaswaraj-logo.png' %}">
+<link rel="stylesheet" href="{% static 'vendor/bootstrap.min.css' %}">
+<link rel="stylesheet" href="{% static 'css/app.css' %}">
+<link rel="stylesheet" href="{% static 'css/reports.css' %}">
+<script src="{% static 'vendor/htmx.min.js' %}" defer></script>
+<script src="{% static 'js/app.js' %}" defer></script></head>
+<body><a class="skip-link" href="#main">Skip to content</a>
+{% if user.is_authenticated %}<div class="app-shell">
+<aside class="sidebar" id="navigation" aria-label="Main navigation">
+<a class="brand" href="{% url 'dashboard:home' %}"><img src="{% static 'img/gramaswaraj-logo.png' %}" width="48" height="66" alt=""><span>{{ organization.short_name|default:"Gramaswaraj" }}<small>MEDIA FACILITATOR NETWORK</small></span></a>
+<div class="workspace-label">ADMINISTRATION <span class="small-dot"></span></div>
+<nav class="nav-stack">
+{% if access.facilitators %}<a href="{% url 'facilitators:index' %}" {% if request.resolver_match.app_name == 'facilitators' %}aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">◎</span> Facilitator registry</a>{% endif %}
+{% if access.applications %}<a href="{% url 'applications:index' %}" {% if request.resolver_match.app_name == 'applications' %}aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">▤</span> Applications</a>{% endif %}
+{% if access.locations %}<a href="{% url 'locations:index' %}" {% if request.resolver_match.app_name == 'locations' %}aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">⌖</span> Location master</a>{% endif %}
+<a href="{% url 'dashboard:home' %}" {% if request.resolver_match.url_name == 'home' %}aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">▦</span> Overview</a>
+<a href="{% url 'reports:index' %}"><span class="nav-icon" aria-hidden="true">▤</span> Reports</a>
+<a href="{% url 'dashboard:profile' %}" {% if request.resolver_match.url_name == 'profile' %}aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">◎</span> My access</a>
+{% if access.accounts %}<a href="{% url 'accounts:users' %}" {% if request.resolver_match.url_name == 'users' %}aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">♧</span> Team accounts</a>{% endif %}
+{% if access.audit %}<a href="{% url 'audit' %}" {% if request.resolver_match.url_name == 'audit' %}aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">≡</span> Audit trail</a>{% endif %}
+{% if access.organization or access.system %}<div class="nav-section">CONFIGURATION</div>{% endif %}
+{% if access.organization %}<a href="{% url 'organization:settings' %}" {% if request.resolver_match.url_name == 'settings' %}aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">◇</span> Organization</a>{% endif %}
+{% if access.system %}<a href="{% url 'organization:system' %}" {% if request.resolver_match.url_name == 'system' %}aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">⚙</span> System & privacy</a>{% endif %}
+</nav>
+<div class="sidebar-note"><span class="eyebrow">BUILT FOR LOCAL VOICES</span><p>One connected network.<br>Every Grama Panchayat.</p><div class="kerala-label">KERALA <span>•</span> INDIA</div></div>
+<div class="sidebar-footer"><span class="avatar">{{ user.username|first|upper }}</span><div><strong>{{ user.get_full_name|default:user.username }}</strong><small>Staff workspace</small></div></div></aside>
+<div class="main-shell"><header class="topbar">
+<button class="mobile-menu" type="button" aria-controls="navigation" aria-expanded="false" aria-label="Toggle navigation">☰</button>
+<div class="breadcrumb-text">Gramaswaraj <span>/</span> {% block breadcrumb %}Administration{% endblock %}</div>
+<div class="topbar-actions">
+<form action="{% url 'set_language' %}" method="post" class="language-form">{% csrf_token %}<input name="next" type="hidden" value="{{ request.path }}"><label class="visually-hidden" for="language">Interface language</label><select id="language" name="language" aria-label="Interface language"><option value="en" {% if LANGUAGE_CODE == 'en' %}selected{% endif %}>English</option><option value="ml" {% if LANGUAGE_CODE == 'ml' %}selected{% endif %}>മലയാളം</option></select><button type="submit" class="language-apply">Apply</button></form>
+<form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button type="submit" class="signout">Sign out ↗</button></form>
+</div></header>
+<main id="main" class="main-content">{% include "includes/messages.html" %}{% block content %}{% endblock %}</main>
+<footer class="page-footer"><span>{{ organization.name|default:"Kerala Grama Panchayat Association" }}</span><span>GMFMS · Reports v0.8</span></footer>
+</div></div>
+{% else %}<main id="main" class="auth-shell">{% include "includes/messages.html" %}{% block public_content %}{% endblock %}</main>{% endif %}
+</body></html>

@@ -1,0 +1,1 @@
+.card-previews{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px}.card-previews .panel{padding:20px}.card-previews img{width:100%;height:auto;display:block;border:1px solid #dce5e1}.card-previews h2{margin-bottom:16px}@media(max-width:900px){.card-previews{grid-template-columns:1fr}}

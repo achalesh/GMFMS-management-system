@@ -1,0 +1,36 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdir,writeFile} from 'node:fs/promises';
+import ExcelJS from 'exceljs';
+import {PDFDocument} from 'pdf-lib';
+import {database} from '../src/database.js';
+import {migrate} from '../src/schema.js';
+import {seed} from '../src/seed.js';
+import {config} from '../src/config.js';
+import {loadUser} from '../src/policies.js';
+import {today} from '../src/registry.js';
+import {reportData,reportKinds,placesFor,snapshot,summarize} from '../src/reports.js';
+import {generateExport} from '../src/report-routes.js';
+import {csvBytes,xlsxBytes,pdfBytes} from '../src/report-exporting.js';
+async function setup(){const db=await database({sqlite:':memory:'});await migrate(db);await seed(db);for(const id of ['admin','mixed','viewer','operator','reviewer'])await db.run('INSERT INTO gmf_users(id,username,email,password_hash,superuser) VALUES (?,?,?,?,?)',[id,id,id+'@example.invalid','unused',id==='admin'?1:0]);for(const [id,user,role,scope,district] of [['m1','mixed','VIEWER','STATE',null],['m2','mixed','DISTRICT_ADMIN','DISTRICT','TVM'],['v','viewer','VIEWER','STATE',null],['o','operator','ID_CARD_OPERATOR','STATE',null],['r','reviewer','REVIEWER','STATE',null]])await db.run('INSERT INTO gmf_scopes(id,user_id,role,scope,district_code) VALUES (?,?,?,?,?)',[id,user,role,scope,district]);
+ const near=new Date(today());near.setUTCDate(near.getUTCDate()+10);const at=Date.now();
+ for(const [id,p,name,mobile,role] of [['t','G01071','Synthetic TVM Name','9876543210','PRIMARY'],['a','G01071','Synthetic Assistant','9876543211','ASSISTANT'],['k','G14020','Synthetic KSD Name','9876543212','PRIMARY']]){await db.run('INSERT INTO gmf_applications(id,number,panchayat_code,payload,full_name,normalized_name,mobile,email,status,submitted_at) VALUES (?,?,?,?,?,?,?,?,?,?)',[id,'QA-'+id,p,JSON.stringify({2:{address:'PRIVATE ADDRESS'},3:{skills:['Photography','Reporting']},4:{equipment:['Smartphone']}}),name,name,mobile,'private@example.invalid','APPROVED',at]);await db.run('INSERT INTO gmf_facilitators(id,application_id,number,panchayat_code,full_name,role,valid_until,primary_key,approved_by,approved_at) VALUES (?,?,?,?,?,?,?,?,?,?)',[id,id,'GS-MF-QA-'+id,p,name,role,near.toISOString().slice(0,10),role==='PRIMARY'?p:null,'admin',at]);}
+ for(const [id,p] of [['p1','G01071'],['p2','G14020']])await db.run('INSERT INTO gmf_applications(id,number,panchayat_code,payload,full_name,normalized_name,mobile,email,submitted_at) VALUES (?,?,?,?,?,?,?,?,?)',[id,'QA-'+id,p,'{}','Pending synthetic','pending','9999999999','',at]);
+ await db.run('INSERT INTO gmf_registry_history(id,facilitator_id,actor_id,action,reason,snapshot,created_at) VALUES (?,?,?,?,?,?,?)',['h','t','admin','transfer','Private internal reason',JSON.stringify({old:{panchayat_code:'G14020',status:'ACTIVE',role:'PRIMARY'},new:{panchayat_code:'G01071',status:'ACTIVE',role:'PRIMARY',valid_until:near.toISOString().slice(0,10)}}),at]);return db;}
+test('nine reports, primary coverage, pending visibility, hierarchy/date filters and restricted contacts',async()=>{const db=await setup();try{
+ const admin=await loadUser(db,'admin'),mixed=await loadUser(db,'mixed'),viewer=await loadUser(db,'viewer'),operator=await loadUser(db,'operator');
+ const summary=summarize(await snapshot(db,admin,await placesFor(db,admin,'dashboard.view')),admin);assert.equal(summary.active,3);assert.equal(summary.covered,2);assert.equal(summary.vacant,939);assert.equal(summary.pending,2);assert.equal(summary.expiring,3);
+ for(const report of Object.keys(reportKinds)){const data=await reportData(db,admin,{report});assert(data.headers.length);assert(data.rows.length);}
+ const coverage=await reportData(db,viewer,{report:'coverage',panchayat:'G01071'});assert.equal(coverage.rows[0][4],2);assert.equal(coverage.rows[0][5],'Restricted');assert.equal(coverage.rows[0][6],1);await assert.rejects(reportData(db,viewer,{report:'applications'}));await assert.rejects(reportData(db,viewer,{},true));
+ assert((await reportData(db,operator,{report:'facilitators'})).rows.every(row=>row[10]==='Restricted'));
+ const mixedView=await reportData(db,mixed,{report:'facilitators'});assert.equal(mixedView.rows.find(row=>row[0]==='GS-MF-QA-k')[10],'Restricted');assert.equal(mixedView.rows.find(row=>row[0]==='GS-MF-QA-t')[10],'9876543210');const exported=await reportData(db,mixed,{report:'facilitators'},true);assert.equal(exported.rows.length,2);assert(!JSON.stringify(exported).includes('Synthetic KSD Name'));
+ assert.equal((await reportData(db,mixed,{report:'history'},true)).rows.length,0);assert.equal((await reportData(db,admin,{report:'history'})).rows.length,1);
+ for(const bad of [{district:'TVM',block:'B14149'},{report:'coverage',status:'ACTIVE'},{report:'applications',role:'PRIMARY'},{report:'facilitators',status:'SUBMITTED'},{start:'2026-02-31'},{start:'2026-12-01',end:'2026-01-01'},{report:['coverage']}])await assert.rejects(reportData(db,admin,bad));
+ await assert.rejects(reportData(db,mixed,{district:'KSD'},true));await db.run("UPDATE gmf_facilitators SET valid_until='2020-01-01' WHERE id='k'");const changed=await reportData(db,admin,{report:'coverage'});assert.equal(changed.summary.covered,1);assert.equal(changed.summary.expired,1);
+ }finally{await db.close();}});
+test('CSV/XLSX neutralize formula execution; PDF is complete and capped; audited exports recheck live roles',async()=>{const db=await setup(),cfg=config({});try{
+ const sample={title:'Synthetic QA report',headers:['Name','Count'],rows:[['=HYPERLINK("https://example.invalid")',2],['\t+1',3],['പരീക്ഷണ പേര്',4]]};const csv=csvBytes(sample).toString('utf8');assert(csv.includes("'=HYPERLINK"));assert(csv.includes("'\t+1"));const xlsx=await xlsxBytes(sample,'Synthetic data only');const workbook=new ExcelJS.Workbook();await workbook.xlsx.load(xlsx);const sheet=workbook.getWorksheet('Report');assert.equal(sheet.getCell('A5').type,ExcelJS.ValueType.String);assert.equal(sheet.getCell('A5').value,sample.rows[0][0]);assert.equal(sheet.getCell('B5').type,ExcelJS.ValueType.Number);assert.equal(sheet.getCell('A7').value,'പരീക്ഷണ പേര്');assert.equal(sheet.autoFilter,'A4:B4');
+ const pdf=await pdfBytes(sample,'Synthetic data only');assert.equal((await PDFDocument.load(pdf)).getPageCount(),1);await assert.rejects(pdfBytes({...sample,rows:Array.from({length:501},()=>['row',1])},'QA'));
+ for(const format of ['csv','xlsx','pdf']){const out=await generateExport(db,cfg,'mixed',{report:'facilitators'},{format,reason:'Synthetic QA export.'});assert(out.bytes.length>100);if(process.env.REPORT_QA_OUTPUT==='1'){await mkdir('var',{recursive:true});await writeFile('var/qa-report.'+format,out.bytes);}}
+ assert.equal((await db.all('SELECT COUNT(*) AS n FROM gmf_report_exports'))[0].n,3);await assert.rejects(generateExport(db,cfg,'mixed',{}, {format:'csv',reason:''}));await assert.rejects(generateExport(db,cfg,'reviewer',{}, {format:'csv',reason:'Not permitted.'}));await db.run("UPDATE gmf_scopes SET active=0 WHERE id='m2'");await assert.rejects(generateExport(db,cfg,'mixed',{}, {format:'csv',reason:'Revoked export permission.'}));assert.equal((await db.all('SELECT COUNT(*) AS n FROM gmf_report_exports'))[0].n,3);
+ }finally{await db.close();}});

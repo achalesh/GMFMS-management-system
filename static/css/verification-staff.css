@@ -1,0 +1,1 @@
+.qr-preview{display:flex;justify-content:center;margin-bottom:24px}.qr-preview img{max-width:100%;height:auto;image-rendering:pixelated}.qr-actions{display:flex;gap:12px;flex-wrap:wrap;margin:20px 0}#verification-url{font-size:13px}.qr-actions+.helptext{margin-bottom:28px}
