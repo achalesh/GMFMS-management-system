@@ -9,4 +9,9 @@ for(const [flag,file] of [['RUN_MIGRATIONS','migrate.js'],['BOOTSTRAP_ADMIN','cr
  }
 }
 delete process.env.ADMIN_PASSWORD;
-await import('../src/server.js');
+// Hostinger's LiteSpeed launcher requires this entry synchronously.
+// Keep the asynchronous ESM server behind a dynamic import, with no top-level await here.
+import('../src/server.js').catch(()=>{
+ console.error('Server module failed to load. Check deployment dependencies and configuration.');
+ process.exitCode=1;
+});
