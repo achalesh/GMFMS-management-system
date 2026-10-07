@@ -1,7 +1,12 @@
 import {FormError} from './registration-fields.js';
 export async function uniqueContacts(db,personal,exclude=''){
  const mobile=personal.mobile,email=(personal.email||'').trim().toLowerCase();
- const rows=await db.all("SELECT mobile,email FROM gmf_applications WHERE id<>? AND (mobile=? OR (?<>'' AND LOWER(email)=?))",[exclude,mobile,email,email]);
+ // Prepared values can use a different collation from Hostinger's existing columns.
+ // Compare normalized bytes on MySQL, and omit email matching entirely when blank.
+ const operand=value=>db.dialect==='mysql'?`CAST(${value} AS BINARY)`:value;
+ const predicates=[`${operand('mobile')}=${operand('?')}`],args=[exclude,mobile];
+ if(email){predicates.push(`${operand('LOWER(email)')}=${operand('?')}`);args.push(email);}
+ const rows=await db.all(`SELECT mobile,email FROM gmf_applications WHERE ${operand('id')}<>${operand('?')} AND (${predicates.join(' OR ')})`,args);
  if(rows.some(r=>r.mobile===mobile))throw new FormError('This mobile number is already registered. Use a different number or contact the administrator.');
  if(email&&rows.some(r=>r.email.toLowerCase()===email))throw new FormError('This email address is already registered. Use a different email or contact the administrator.');
 }

@@ -6,7 +6,7 @@ export async function database(config){
   const url=new URL(config.mysql);
   if(url.protocol!=='mysql:')throw Error('Use a MySQL URL');
   const pool=mysql.createPool({host:url.hostname,port:Number(url.port||3306),user:decodeURIComponent(url.username),password:decodeURIComponent(url.password),database:decodeURIComponent(url.pathname.slice(1)),charset:'utf8mb4',connectionLimit:5,multipleStatements:false,...(config.ssl?{ssl:{rejectUnauthorized:true}}:{})});
-  function wrap(conn){return {all:async(sql,args=[])=>{const [rows]=await conn.execute(sql.replaceAll('INSERT OR IGNORE','INSERT IGNORE'),args);return rows;},run:async(sql,args=[])=>{const [r]=await conn.execute(sql.replaceAll('INSERT OR IGNORE','INSERT IGNORE'),args);return r.affectedRows;}};}
+  function wrap(conn){return {dialect:'mysql',all:async(sql,args=[])=>{const [rows]=await conn.execute(sql.replaceAll('INSERT OR IGNORE','INSERT IGNORE'),args);return rows;},run:async(sql,args=[])=>{const [r]=await conn.execute(sql.replaceAll('INSERT OR IGNORE','INSERT IGNORE'),args);return r.affectedRows;}};}
   return {...wrap(pool),dialect:'mysql',transaction:async(fn)=>{const c=await pool.getConnection();try{await c.beginTransaction();const result=await fn(wrap(c));await c.commit();return result;}catch(e){await c.rollback();throw e;}finally{c.release();}},close:()=>pool.end()};
  }
  const {DatabaseSync}=await import('node:sqlite');
