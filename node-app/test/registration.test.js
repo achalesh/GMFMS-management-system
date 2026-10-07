@@ -1,3 +1,5 @@
+import {registryAction} from '../src/registry.js';
+import {uniqueContacts,panchayatCapacity} from '../src/member-rules.js';
 import {cancelRegistration} from '../src/registration-cancellation.js';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
@@ -16,7 +18,7 @@ const personal={full_name:'QA Applicant',mobile:'+91 9876543210',address:'Synthe
 const location={district:'TVM',block:'B01011',panchayat:'G01071'};
 async function setup(){const db=await database({sqlite:':memory:'});await migrate(db);await seed(db);return db;}
 async function photo(){return processUpload({buffer:await sharp({create:{width:200,height:300,channels:3,background:'#888'}}).png().toBuffer(),originalname:'qa.png',mimetype:'image/png'},true,[50,50,1]);}
-async function ready(db){const id=await newDraft(db);await saveStep(db,id,1,1,location);await saveStep(db,id,2,2,personal);await saveStep(db,id,3,3,{years_experience:'0',languages:['Malayalam']});await saveStep(db,id,4,4,{});await saveStep(db,id,5,5,{}, {photo:await photo()});return id;}
+async function ready(db,details=personal){const id=await newDraft(db);await saveStep(db,id,1,1,location);await saveStep(db,id,2,2,details);await saveStep(db,id,3,3,{years_experience:'0',languages:['Malayalam']});await saveStep(db,id,4,4,{});await saveStep(db,id,5,5,{}, {photo:await photo()});return id;}
 const consent={accuracy:'on',processing:'on',consent_version:'1.0'};
 test('field validation rejects forged hierarchy, contacts, dates, choices and URL protocols',async()=>{const db=await setup();try{
  await assert.rejects(validateStep(db,1,{...location,district:'KSD'}));
@@ -34,7 +36,7 @@ test('draft revisions, consent, duplicate approval and primary appointment race 
  const db=await setup();try{
  const id=await newDraft(db);await assert.rejects(saveStep(db,id,2,1,personal));await saveStep(db,id,1,1,location);await assert.rejects(saveStep(db,id,1,1,location));await assert.rejects(submit(db,id,2,consent));
  await db.run('INSERT INTO gmf_users(id,username,email,password_hash,superuser) VALUES (?,?,?,?,1)',['admin','testadmin','admin@example.invalid','unused']);
- const first=await ready(db),second=await ready(db);await assert.rejects(submit(db,first,6,{...consent,processing:''}));await submit(db,first,6,consent);await submit(db,second,6,consent);assert.equal((await db.all('SELECT COUNT(*) AS n FROM gmf_applications'))[0].n,2);await submit(db,first,6,consent);assert.equal((await db.all('SELECT COUNT(*) AS n FROM gmf_applications'))[0].n,2);
+ const first=await ready(db),second=await ready(db,{...personal,mobile:"9876543211"});await assert.rejects(submit(db,first,6,{...consent,processing:''}));await submit(db,first,6,consent);await submit(db,second,6,consent);assert.equal((await db.all('SELECT COUNT(*) AS n FROM gmf_applications'))[0].n,2);await submit(db,first,6,consent);assert.equal((await db.all('SELECT COUNT(*) AS n FROM gmf_applications'))[0].n,2);
  await assert.rejects(saveStep(db,first,2,7,personal));
  for(const app of [first,second])await reviewAction(db,'admin',app,{action:'start_review',revision:'1'});
  await assert.rejects(reviewAction(db,'admin',first,{action:'approve',revision:'2',verified:'on',role:'PRIMARY'}));
@@ -80,5 +82,30 @@ test('discard removes only an unfinished draft; withdrawal retains records and b
  await assert.rejects(cancelRegistration(db,other,'withdraw',{revision:before.revision+1,confirmed:'on',reason:'Repeat'}));
  await db.run("UPDATE gmf_applications SET status='APPROVED' WHERE id=?",[other]);
  await assert.rejects(cancelRegistration(db,other,'withdraw',{revision:before.revision+1,confirmed:'on',reason:'Approved'}));
+ }finally{await db.close();}
+});
+
+
+test('unique contact checks reject repeated phone and case-insensitive email including submitted races',async()=>{
+ const db=await setup();try{
+ const one=await ready(db,{...personal,email:'unique@example.invalid'}),two=await ready(db,{...personal,email:'unique@example.invalid'});
+ await submit(db,one,6,{accuracy:'on',processing:'on',consent_version:'1.0'});
+ await assert.rejects(submit(db,two,6,{accuracy:'on',processing:'on',consent_version:'1.0'}),/mobile number is already registered/);
+ await assert.rejects(uniqueContacts(db,{mobile:'9876543212',email:'UNIQUE@example.invalid'}),/email address is already registered/);
+ await uniqueContacts(db,{mobile:'9876543212',email:''});
+ assert.equal((await getDraft(db,two)).submitted,0);
+ }finally{await db.close();}
+});
+test('three-member cap protects concurrent approvals and releases a place after permanent revocation',async()=>{
+ const db=await setup();try{
+ await db.run("INSERT INTO gmf_users(id,username,email,password_hash,superuser) VALUES ('admin','admin','admin@example.invalid','unused',1)");
+ const ids=[];for(let i=0;i<4;i++){const id=await ready(db,{...personal,mobile:String(9876543220+i)});await submit(db,id,6,{accuracy:'on',processing:'on',consent_version:'1.0'});await reviewAction(db,'admin',id,{action:'start_review',revision:1});ids.push(id);}
+ const decision={action:'approve',revision:2,role:'ASSISTANT',verified:'on',acknowledge:'on',reason:'Verified synthetic applicant'};
+ const outcomes=await Promise.allSettled(ids.map(id=>reviewAction(db,'admin',id,decision)));
+ assert.equal(outcomes.filter(o=>o.status==='fulfilled').length,3);
+ const pending=(await db.all("SELECT id FROM gmf_applications WHERE status='UNDER_REVIEW'"))[0];const f=(await db.all('SELECT id FROM gmf_facilitators'))[0];
+ await registryAction(db,'admin',f.id,{action:'suspend',revision:1,reason:'Still occupies membership'});await assert.rejects(panchayatCapacity(db,'G01071'));
+ await registryAction(db,'admin',f.id,{action:'revoke',revision:2,reason:'End membership permanently'});await reviewAction(db,'admin',pending.id,decision);
+ assert.equal((await db.all("SELECT COUNT(*) AS n FROM gmf_facilitators WHERE status='ACTIVE'"))[0].n,3);
  }finally{await db.close();}
 });

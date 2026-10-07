@@ -1,3 +1,4 @@
+import {panchayatCapacity} from './member-rules.js';
 import {randomUUID} from 'node:crypto';
 import {FormError} from './registration-fields.js';
 import {can,loadUser} from './policies.js';
@@ -34,6 +35,7 @@ export async function registryAction(db,userId,id,input){return db.transaction(a
  }else throw new FormError('Unknown registry action.');
  const primary=f.status==='ACTIVE'&&!f.ended&&f.valid_until>=today()&&f.role==='PRIMARY'?f.panchayat_code:null;
  if(primary){await tx.run('UPDATE gmf_facilitators SET primary_key=NULL WHERE primary_key=? AND valid_until<?',[primary,today()]);if((await tx.all('SELECT id FROM gmf_facilitators WHERE primary_key=? AND id<>?',[primary,id])).length)throw new FormError('This panchayat already has an active primary facilitator.',409);}
+ if(!f.ended&&['ACTIVE','SUSPENDED','INACTIVE'].includes(f.status)&&f.valid_until>=today())await panchayatCapacity(tx,f.panchayat_code,id);
  f.revision++;await tx.run('UPDATE gmf_facilitators SET status=?,valid_until=?,panchayat_code=?,role=?,primary_key=? WHERE id=?',[f.status,f.valid_until,f.panchayat_code,f.role,primary,id]);
  await tx.run("INSERT OR IGNORE INTO gmf_registry_meta(id,notes) VALUES (?,'')",[id]);await tx.run('UPDATE gmf_registry_meta SET revision=?,ended=?,reference=?,notes=? WHERE id=?',[f.revision,f.ended,f.reference,f.notes,id]);await history(tx,f,userId,action,reason,old);
  });}

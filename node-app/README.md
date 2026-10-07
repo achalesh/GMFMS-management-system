@@ -78,3 +78,11 @@ MIGRATION.md describes the private Django snapshot export and verified integrity
 ## Applicant cancellation
 
 Unfinished drafts can be discarded from the wizard after confirmation; the draft and its uploads are deleted. Submitted applications awaiting a decision can be withdrawn from the confirmation page in the same browser session, with a reason, revision check and confirmation. Withdrawal retains the application/documents and audit/review history, invalidates correction tickets and removes it from pending counts. Approved/rejected applications cannot use this action. No public lookup by reference number grants cancellation access; support-assisted recovery for a lost applicant session remains future work.
+
+## Membership limits and contact uniqueness
+
+A panchayat may have at most three current appointments. Active, suspended and inactive appointments with unexpired validity and no recorded end count toward this limit. Approval, transfer, renewal and reactivation enforce capacity under the shared transaction lock; permanent revocation, replacement, resignation and expiry release occupancy. Pending applications may still be submitted. One primary per panchayat remains enforced.
+
+Mobile numbers and nonblank email addresses cannot repeat across submitted applications, including historical, rejected or withdrawn records. Email matching ignores case. Registration saves, submission, correction and approval enforce this rule, and duplicate acknowledgement cannot override it. Blank email addresses are allowed. Existing records are not removed or changed by these checks.
+
+To end membership permanently, open Facilitators, select the member, choose Revoke permanently, enter a reason and save. Revocation prevents reactivation and invalidates public authorization; records and audit history are retained. This is not personal-data erasure.

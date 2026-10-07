@@ -1,3 +1,4 @@
+import {uniqueContacts,panchayatCapacity} from './member-rules.js';
 import {settings} from './settings.js';
 import {randomUUID} from 'node:crypto';
 import {FormError,validateStep,catalog,slots} from './registration-fields.js';
@@ -8,7 +9,7 @@ export async function getDraft(db,id){const d=(await db.all('SELECT * FROM gmf_d
 function editable(d,revision){if(d.submitted)throw new FormError('This application has already been submitted.',409);if(d.revision!==Number(revision))throw new FormError('This form changed in another tab. Reload before continuing.',409);}
 export async function saveStep(db,id,step,revision,input,uploads={}){
  return db.transaction(async tx=>{await policyLock(tx);const d=await getDraft(tx,id);editable(d,revision);if(!Number.isInteger(step)||step<1||step>5||step>d.completed+1)throw new FormError('Complete the previous steps first.');
- if(step<5)d.data[step]=await validateStep(tx,step,input);
+ if(step<5){d.data[step]=await validateStep(tx,step,input);if(step===2)await uniqueContacts(tx,d.data[step]);}
  else{
  for(const slot of slots){if(slot!=='photo'&&input['remove_'+slot]==='on')await tx.run('DELETE FROM gmf_uploads WHERE owner_id=? AND slot=?',[id,slot]);if(uploads[slot]){const u=uploads[slot];await tx.run('DELETE FROM gmf_uploads WHERE owner_id=? AND slot=?',[id,slot]);await tx.run('INSERT INTO gmf_uploads(owner_id,slot,mime,body,sha256) VALUES (?,?,?,?,?)',[id,slot,u.mime,u.body,u.sha256]);}}
  if(!(await tx.all("SELECT slot FROM gmf_uploads WHERE owner_id=? AND slot='photo'",[id])).length)throw new FormError('Upload a profile photograph.');
@@ -22,7 +23,7 @@ export async function submit(db,id,revision,input){return db.transaction(async t
  const policy=await policyLock(tx),d=await getDraft(tx,id);if(d.submitted)return (await tx.all('SELECT number FROM gmf_applications WHERE id=?',[id]))[0].number;editable(d,revision);
  if(d.completed<5)throw new FormError('Complete all information steps first.');
  if(input.accuracy!=='on'||input.processing!=='on'||input.website||input.consent_version!==policy.consent_version)throw new FormError('Accept the current required declarations and consent.');
- await validateApplication(tx,id,d.data);
+ await validateApplication(tx,id,d.data);await uniqueContacts(tx,d.data[2],id);
  d.data.consent={version:policy.consent_version,at:Date.now(),text:catalog.CONSENT,accuracy:true,processing:true,public_mobile:input.public_mobile==='on',public_email:input.public_email==='on',public_social:input.public_social==='on'};
  const number=`GS-APP-${new Date().getUTCFullYear()}-${String(policy.app_sequence+1).padStart(6,'0')}`,personal=d.data[2];
  await tx.run('UPDATE gmf_registration_policy SET app_sequence=app_sequence+1 WHERE id=1');
@@ -44,7 +45,7 @@ export async function reviewAction(db,userId,id,input){return db.transaction(asy
  const reason=typeof input.reason==='string'?input.reason.trim():'';if(reason.length>2000||input.action==='reject'&&!reason)throw new FormError('Provide a reason of up to 2,000 characters.');
  if(input.action==='approve'){
  if(input.verified!=='on')throw new FormError('Confirm that the application, documents and consent were verified.');
- await validateApplication(tx,id,a.data);if(!a.data.consent?.accuracy||!a.data.consent?.processing||!a.data.consent?.at)throw new FormError('Recorded consent is incomplete.');
+ await validateApplication(tx,id,a.data);await uniqueContacts(tx,a.data[2],id);await panchayatCapacity(tx,a.panchayat_code);if(!a.data.consent?.accuracy||!a.data.consent?.processing||!a.data.consent?.at)throw new FormError('Recorded consent is incomplete.');
  if((await duplicates(tx,a)).length&&(input.acknowledge!=='on'||!reason))throw new FormError('Acknowledge the duplicate warnings and explain your decision.');
  const role=input.role;if(!['PRIMARY','ASSISTANT','ADDITIONAL'].includes(role))throw new FormError('Choose a valid appointment role.');
  const today=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Kolkata'});

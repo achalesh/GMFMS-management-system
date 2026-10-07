@@ -1,3 +1,4 @@
+import {uniqueContacts} from './member-rules.js';
 import {randomUUID,randomBytes,createHash} from 'node:crypto';
 import {fields,slots,catalog,FormError,validateStep} from './registration-fields.js';
 import {policyLock,getApplication,validateApplication} from './registration-services.js';
@@ -41,7 +42,7 @@ export async function applyCorrection(db,hash,input,uploads={}){return db.transa
  await tx.run('DELETE FROM gmf_uploads WHERE owner_id=? AND slot=?',[ticket.application_id,slot]);await tx.run('INSERT INTO gmf_uploads(owner_id,slot,mime,body,sha256) VALUES (?,?,?,?,?)',[ticket.application_id,slot,u.mime,u.body,u.sha256]);changed.push(slot);
  }
  if(!changed.length)throw new FormError('Make at least one requested correction before resubmitting.');
- await validateApplication(tx,ticket.application_id,data);
+ await validateApplication(tx,ticket.application_id,data);await uniqueContacts(tx,data[2],ticket.application_id);
  data.consent={...data.consent,version:policy.consent_version,at:Date.now(),text:catalog.CONSENT,accuracy:true,processing:true};const personal=data[2];
  await tx.run("UPDATE gmf_applications SET payload=?,full_name=?,normalized_name=?,mobile=?,email=?,status='SUBMITTED',revision=revision+1 WHERE id=?",[JSON.stringify(data),personal.full_name,personal.full_name.normalize('NFKC').toLowerCase().replace(/\s+/g,' ').trim(),personal.mobile,personal.email,ticket.application_id]);
  await tx.run('UPDATE gmf_corrections SET used=1 WHERE id=?',[ticket.id]);await event(tx,{id:ticket.application_id,status:ticket.status},null,'correction_resubmitted','SUBMITTED','Corrected fields: '+changed.join(', '));
