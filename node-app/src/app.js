@@ -70,6 +70,6 @@ export async function createApp(db,cfg){
  res.render('locations',{rows,q});
  });
  app.use((req,res)=>res.sendStatus(404));
- app.use((error,req,res,next)=>{if(res.headersSent)return next(error);if(error instanceof FormError)return res.status(error.status).render('form-error',{message:error.message});res.status(error.status===413?413:500).send('Unable to complete the request. Please try again.');});
+ app.use((error,req,res,next)=>{if(res.headersSent)return next(error);if(error instanceof FormError)return res.status(error.status).render('form-error',{message:error.message});const incident=randomUUID();const code=typeof error.code==='string'&&/^[A-Z0-9_]{1,60}$/.test(error.code)?error.code:'UNEXPECTED_ERROR';console.error(JSON.stringify({event:'request_failed',incident,method:req.method,route:req.route?.path||'middleware',code,type:error.name==='TypeError'?'TypeError':'Error'}));res.set('X-Request-ID',incident);res.status(error.status===413?413:500).send('Unable to complete the request. Please try again. Reference: '+incident);});
  return app;
 }
