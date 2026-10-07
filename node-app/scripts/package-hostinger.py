@@ -13,7 +13,7 @@ for directory in ['src', 'scripts', 'test', 'views', 'public', 'assets', 'data']
             raise RuntimeError('Symbolic links are not permitted in the deployment package')
         if path.is_file() and '__pycache__' not in path.parts:
             files.append(path)
-for name in ['package.json', 'pnpm-lock.yaml', 'README.md', 'HOSTINGER.md', 'MIGRATION.md', '.env.production.example']:
+for name in ['package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', 'README.md', 'HOSTINGER.md', 'MIGRATION.md', '.env.production.example']:
     files.append(root / name)
 manifest = {}
 with ZipFile(target / 'gramaswaraj-hostinger.zip', 'w', ZIP_DEFLATED) as archive:
