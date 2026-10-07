@@ -1,3 +1,4 @@
+import {deleteRejectedApplication,deletionReasons} from './application-deletion.js';
 import {cancelRegistration,withdrawable} from './registration-cancellation.js';
 import express from 'express';
 import {settings} from './settings.js';
@@ -72,8 +73,10 @@ export function staffApplications(db){
  const a=await getApplication(db,req.params.id,res.locals.user),warnings=await duplicates(db,a);
  const events=await db.all('SELECT action,from_status,to_status,reason,created_at FROM gmf_review_events WHERE application_id=? ORDER BY created_at',[a.id]);
  const uploads=await db.all('SELECT slot FROM gmf_uploads WHERE owner_id=?',[a.id]);const facilitator=(await db.all('SELECT number,role,valid_until FROM gmf_facilitators WHERE application_id=?',[a.id]))[0];
- res.render('application-detail',{correctionChoices,application:a,fields,catalog,events,uploads,facilitator,warnings:warnings.length,canReview:can(res.locals.user,'applications.review',a),canApprove:can(res.locals.user,'applications.approve',a),canContacts:can(res.locals.user,'contacts.view',a)});
+ res.render('application-detail',{correctionChoices,application:a,fields,catalog,events,uploads,facilitator,warnings:warnings.length,canDelete:can(res.locals.user,'applications.delete',a)&&a.status==='REJECTED'&&!facilitator,canReview:can(res.locals.user,'applications.review',a),canApprove:can(res.locals.user,'applications.approve',a),canContacts:can(res.locals.user,'contacts.view',a)});
  });
+ r.get('/applications/:id/delete/',async(req,res)=>{const a=await getApplication(db,req.params.id,res.locals.user,'applications.delete');if(a.status!=='REJECTED'||(await db.all('SELECT id FROM gmf_facilitators WHERE application_id=?',[a.id])).length)throw new FormError('Only rejected applications without a facilitator record can be deleted.',409);res.render('application-delete',{application:a,reasons:deletionReasons,error:''});});
+ r.post('/applications/:id/delete/',async(req,res)=>{try{await deleteRejectedApplication(db,res.locals.user.id,req.params.id,req.body);res.redirect('/applications/');}catch(e){if(!(e instanceof FormError)||e.status!==400)throw e;const a=await getApplication(db,req.params.id,res.locals.user,'applications.delete');res.status(400).render('application-delete',{application:a,reasons:deletionReasons,error:e.message});}});
  r.post('/applications/:id/',async(req,res)=>{await reviewAction(db,res.locals.user.id,req.params.id,req.body);res.redirect(`/applications/${req.params.id}/`);});
  r.get('/applications/:id/files/:slot',async(req,res)=>{
  const a=await getApplication(db,req.params.id,res.locals.user);if(!can(res.locals.user,'contacts.view',a))throw new FormError('File unavailable.',404);

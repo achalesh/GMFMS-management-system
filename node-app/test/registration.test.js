@@ -1,3 +1,4 @@
+import {deleteRejectedApplication} from '../src/application-deletion.js';
 import {registryAction} from '../src/registry.js';
 import {uniqueContacts,panchayatCapacity} from '../src/member-rules.js';
 import {cancelRegistration} from '../src/registration-cancellation.js';
@@ -107,5 +108,25 @@ test('three-member cap protects concurrent approvals and releases a place after 
  await registryAction(db,'admin',f.id,{action:'suspend',revision:1,reason:'Still occupies membership'});await assert.rejects(panchayatCapacity(db,'G01071'));
  await registryAction(db,'admin',f.id,{action:'revoke',revision:2,reason:'End membership permanently'});await reviewAction(db,'admin',pending.id,decision);
  assert.equal((await db.all("SELECT COUNT(*) AS n FROM gmf_facilitators WHERE status='ACTIVE'"))[0].n,3);
+ }finally{await db.close();}
+});
+
+
+test('only super admin can delete a rejected application; contacts are released and minimal audit retained',async()=>{
+ const db=await setup();try{
+ for(const [id,superuser] of [['admin',1],['state',0]])await db.run('INSERT INTO gmf_users(id,username,email,password_hash,superuser) VALUES (?,?,?,?,?)',[id,id,id+'@example.invalid','unused',superuser]);
+ await db.run("INSERT INTO gmf_scopes(id,user_id,role,scope) VALUES ('state-role','state','STATE_ADMIN','STATE')");
+ const id=await ready(db,{...personal,email:'released@example.invalid'}),reference=await submit(db,id,6,{accuracy:'on',processing:'on',consent_version:'1.0'});
+ const input={revision:3,confirmed:'on',reference,reason:'Applicant requested deletion'};
+ await assert.rejects(deleteRejectedApplication(db,'admin',id,input));
+ await reviewAction(db,'admin',id,{action:'start_review',revision:1});await reviewAction(db,'admin',id,{action:'reject',revision:2,reason:'Synthetic rejection'});
+ await assert.rejects(deleteRejectedApplication(db,'state',id,input));
+ await assert.rejects(deleteRejectedApplication(db,'admin',id,{...input,revision:2}));await assert.rejects(deleteRejectedApplication(db,'admin',id,{...input,reference:'wrong'}));
+ await db.run('INSERT INTO gmf_corrections(id,application_id,digest,fields,message,expires_at) VALUES (?,?,?,?,?,?)',['delete-ticket',id,'b'.repeat(64),'[]','Sensitive instructions',Date.now()+10000]);
+ await db.run('INSERT INTO gmf_facilitators(id,application_id,number,panchayat_code,full_name,role,valid_until,approved_by,approved_at) VALUES (?,?,?,?,?,?,?,?,?)',['guard',id,'GUARD','G01071','Synthetic','PRIMARY','2099-01-01','admin',0]);await assert.rejects(deleteRejectedApplication(db,'admin',id,input));await db.run("DELETE FROM gmf_facilitators WHERE id='guard'");
+ await deleteRejectedApplication(db,'admin',id,input);
+ for(const [table,key] of [['gmf_applications','id'],['gmf_drafts','id'],['gmf_uploads','owner_id'],['gmf_review_events','application_id'],['gmf_corrections','application_id']])assert.equal((await db.all(`SELECT COUNT(*) AS n FROM ${table} WHERE ${key}=?`,[id]))[0].n,0);
+ await uniqueContacts(db,{mobile:personal.mobile.replace('+91 ',''),email:'released@example.invalid'});
+ const audit=(await db.all("SELECT d.changes,d.reason FROM gmf_audit_details d JOIN gmf_audit a ON a.id=d.id WHERE a.action='application.deleted'"))[0];assert.deepEqual(JSON.parse(audit.changes),{reference,previous_status:'REJECTED'});assert(!JSON.stringify(audit).includes('released@example.invalid'));
  }finally{await db.close();}
 });

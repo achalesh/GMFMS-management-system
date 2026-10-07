@@ -86,3 +86,7 @@ A panchayat may have at most three current appointments. Active, suspended and i
 Mobile numbers and nonblank email addresses cannot repeat across submitted applications, including historical, rejected or withdrawn records. Email matching ignores case. Registration saves, submission, correction and approval enforce this rule, and duplicate acknowledgement cannot override it. Blank email addresses are allowed. Existing records are not removed or changed by these checks.
 
 To end membership permanently, open Facilitators, select the member, choose Revoke permanently, enter a reason and save. Revocation prevents reactivation and invalidates public authorization; records and audit history are retained. This is not personal-data erasure.
+
+## Delete rejected applications
+
+Super Admins can permanently delete a rejected application from its detail page after selecting a reason, typing the exact reference and confirming. The transaction checks live permissions, revision, rejected status and absence of a linked facilitator. It removes the application, private uploads, draft, correction tickets and review events, freeing mobile/email for reuse. A minimal actor/time/reference/reason audit remains without applicant personal data. Existing separately retained backups and migration snapshots are not altered.
