@@ -1,3 +1,4 @@
+import {cancelRegistration} from '../src/registration-cancellation.js';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import sharp from 'sharp';
@@ -54,4 +55,30 @@ test('public HTTP wizard submits privately; reviewer may review but cannot appro
  await staff('/accounts/login/');assert.equal((await staff('/accounts/login/',{username:'reviewer',password:'test-password-123'})).status,302);assert.equal((await staff('/applications/')).status,200);assert.equal((await staff(`/applications/${row.id}/`)).status,200);assert.equal((await staff(`/applications/${row.id}/`,{action:'start_review',revision:'1'})).status,302);assert.equal((await staff(`/applications/${row.id}/`,{action:'approve',revision:'2',role:'PRIMARY',verified:'on'})).status,404);
  await db.run("UPDATE gmf_scopes SET district_code='KSD' WHERE id='scope'");assert.equal((await staff(`/applications/${row.id}/`)).status,404);assert.equal((await staff(`/applications/${row.id}/files/photo`)).status,404);
  }finally{if(server)await new Promise(r=>server.close(r));await db.close();}
+});
+
+
+test('discard removes only an unfinished draft; withdrawal retains records and blocks approval',async()=>{
+ const db=await setup();try{
+ const id=await ready(db),other=await ready(db);
+ await assert.rejects(cancelRegistration(db,id,'discard',{revision:6}));
+ await assert.rejects(cancelRegistration(db,id,'discard',{revision:5,confirmed:'on'}));
+ await cancelRegistration(db,id,'discard',{revision:6,confirmed:'on'});
+ assert.equal((await db.all('SELECT id FROM gmf_drafts WHERE id=?',[id])).length,0);
+ assert.equal((await db.all('SELECT slot FROM gmf_uploads WHERE owner_id=?',[id])).length,0);
+ assert.equal((await getDraft(db,other)).revision,6);
+ await submit(db,other,6,{accuracy:'on',processing:'on',consent_version:'1.0'});
+ await assert.rejects(cancelRegistration(db,other,'discard',{revision:7,confirmed:'on'}));
+ await assert.rejects(cancelRegistration(db,'not-owned','withdraw',{revision:1,confirmed:'on',reason:'Wrong session'}));
+ const before=(await db.all('SELECT revision FROM gmf_applications WHERE id=?',[other]))[0];
+ await db.run('INSERT INTO gmf_corrections(id,application_id,digest,fields,message,expires_at) VALUES (?,?,?,?,?,?)',['cancel-ticket',other,'a'.repeat(64),'[]','Synthetic',Date.now()+100000]);
+ await cancelRegistration(db,other,'withdraw',{revision:before.revision,confirmed:'on',reason:'Applicant withdrew'});
+ assert.equal((await db.all('SELECT status FROM gmf_applications WHERE id=?',[other]))[0].status,'WITHDRAWN');
+ assert.equal((await db.all('SELECT used FROM gmf_corrections WHERE application_id=?',[other]))[0].used,1);
+ assert.equal((await db.all('SELECT slot FROM gmf_uploads WHERE owner_id=?',[other])).length,1);
+ assert.equal((await db.all("SELECT actor_id FROM gmf_review_events WHERE action='withdraw'"))[0].actor_id,'APPLICANT');
+ await assert.rejects(cancelRegistration(db,other,'withdraw',{revision:before.revision+1,confirmed:'on',reason:'Repeat'}));
+ await db.run("UPDATE gmf_applications SET status='APPROVED' WHERE id=?",[other]);
+ await assert.rejects(cancelRegistration(db,other,'withdraw',{revision:before.revision+1,confirmed:'on',reason:'Approved'}));
+ }finally{await db.close();}
 });

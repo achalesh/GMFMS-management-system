@@ -2,7 +2,7 @@ import {can,scopesFor} from './policies.js';
 import {FormError} from './registration-fields.js';
 import {registrySelect,effectiveStatus,today} from './registry.js';
 export const reportKinds={coverage:'Coverage',progress:'Registration progress',skills:'Facilitator skills',equipment:'Equipment availability',history:'Appointment change history',vacancies:'Vacant panchayats',facilitators:'Facilitators',applications:'Applications',expiring:'Expiring within 30 days'};
-export const statuses=['ACTIVE','INACTIVE','SUSPENDED','EXPIRED','REPLACED','REVOKED','PENDING','SUBMITTED','UNDER_REVIEW','CORRECTION_REQUIRED','APPROVED','REJECTED'];
+export const statuses=['ACTIVE','INACTIVE','SUSPENDED','EXPIRED','REPLACED','REVOKED','PENDING','SUBMITTED','UNDER_REVIEW','CORRECTION_REQUIRED','APPROVED','REJECTED','WITHDRAWN'];
 const pending=new Set(['SUBMITTED','UNDER_REVIEW','CORRECTION_REQUIRED']);
 export const hasCapability=(user,cap)=>!!user?.active&&(!!user.superuser||scopesFor(user,cap).length>0);
 export const dateOf=ms=>new Date(Number(ms)).toLocaleDateString('en-CA',{timeZone:'Asia/Kolkata'});
@@ -14,7 +14,7 @@ export function validateFilters(input,places){const f={report:'coverage',date_fi
  const selected=places.filter(p=>(!f.district||p.district_code===f.district)&&(!f.block||p.block_code===f.block)&&(!f.panchayat||p.code===f.panchayat));if((f.district||f.block||f.panchayat)&&!selected.length)throw new FormError('Choose locations within your permitted jurisdiction and the same hierarchy.',403);
  if(['coverage','vacancies'].includes(f.report)&&[f.status,f.role,f.start,f.end].some(Boolean))throw new FormError('Coverage and vacancies are current snapshots. Use location filters only.');
  const appReport=['applications','progress'].includes(f.report);if(appReport&&(f.role||f.date_field!=='registration'))throw new FormError('Application reports support registration dates and application statuses.');
- if(f.status&&(appReport?!['PENDING','SUBMITTED','UNDER_REVIEW','CORRECTION_REQUIRED','APPROVED','REJECTED'].includes(f.status):!['ACTIVE','INACTIVE','SUSPENDED','EXPIRED','REPLACED','REVOKED'].includes(f.status)))throw new FormError('Choose a status appropriate to the report.');return {filters:f,selected};}
+ if(f.status&&(appReport?!['PENDING','SUBMITTED','UNDER_REVIEW','CORRECTION_REQUIRED','APPROVED','REJECTED','WITHDRAWN'].includes(f.status):!['ACTIVE','INACTIVE','SUSPENDED','EXPIRED','REPLACED','REVOKED'].includes(f.status)))throw new FormError('Choose a status appropriate to the report.');return {filters:f,selected};}
 export async function snapshot(db,user,places){if(!places.length)return {places,fs:[],apps:[]};const ids=places.map(p=>p.code),marks=ids.map(()=>'?').join(',');
  const fs=(await db.all(registrySelect+` WHERE f.panchayat_code IN (${marks}) LIMIT 10001`,ids)).filter(f=>can(user,'facilitators.view',f));
  const appPlaces=places.filter(p=>can(user,'applications.view',p));const apps=appPlaces.length?await db.all(`SELECT id,number,panchayat_code,full_name,status,submitted_at FROM gmf_applications WHERE panchayat_code IN (${appPlaces.map(()=>'?').join(',')}) LIMIT 10001`,appPlaces.map(p=>p.code)):[];

@@ -74,3 +74,7 @@ Read HOSTINGER.md for the staged deployment procedure. Run `python scripts/packa
 ## Migration readiness
 
 MIGRATION.md describes the private Django snapshot export and verified integrity assessment. The source and Node operational database remain unchanged. `node scripts/check-mysql.js` checks a configured staging MySQL connection, Unicode support, upload capacity and transactional rollback; Hostinger validation awaits database creation.
+
+## Applicant cancellation
+
+Unfinished drafts can be discarded from the wizard after confirmation; the draft and its uploads are deleted. Submitted applications awaiting a decision can be withdrawn from the confirmation page in the same browser session, with a reason, revision check and confirmation. Withdrawal retains the application/documents and audit/review history, invalidates correction tickets and removes it from pending counts. Approved/rejected applications cannot use this action. No public lookup by reference number grants cancellation access; support-assisted recovery for a lost applicant session remains future work.
