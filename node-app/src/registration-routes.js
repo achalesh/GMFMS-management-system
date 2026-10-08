@@ -74,9 +74,13 @@ function sendFile(res,u,slot,fullName){
 export function staffApplications(db){
  const r=express.Router();
  r.get('/applications/',async(req,res)=>{
- const rows=(await db.all(applicationSelect+' ORDER BY a.submitted_at DESC')).filter(a=>can(res.locals.user,'applications.view',a));
+ const sortOptions=[['submitted','Submission date'],['reference','Reference'],['name','Name'],['panchayat','Panchayat'],['status','Status']];
+ const columns={submitted:'a.submitted_at',reference:'a.number',name:'LOWER(a.full_name)',panchayat:'LOWER(p.name)',status:'a.status'};
+ const sort=Object.hasOwn(columns,req.query.sort)?req.query.sort:'submitted';
+ const direction=['asc','desc'].includes(req.query.direction)?req.query.direction:(sort==='submitted'?'desc':'asc');
+ const rows=(await db.all(applicationSelect+` ORDER BY ${columns[sort]} ${direction.toUpperCase()}, a.number ASC`)).filter(a=>can(res.locals.user,'applications.view',a));
  if(!res.locals.user.superuser&&!res.locals.user.scopes?.some(s=>can({...res.locals.user,scopes:[s]},'applications.view',{district_code:s.district_code,block_code:s.block_code})))throw new FormError('Access denied.',403);
- res.render('applications',{rows});
+ res.render('applications',{rows,sortOptions,sort,direction});
  });
  r.get('/applications/:id/',async(req,res)=>{
  const a=await getApplication(db,req.params.id,res.locals.user),warnings=await duplicates(db,a);
