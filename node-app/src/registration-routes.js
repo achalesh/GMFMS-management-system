@@ -41,7 +41,7 @@ export function publicRegistration(db,cfg){
  const a=(await db.all('SELECT number,status FROM gmf_applications WHERE id=?',[req.session.submittedApplicationId||req.session.draftId||'']))[0];if(!a)throw new FormError('No submitted application in this session.',404);res.render('register-complete',{number:a.number,status:a.status,canWithdraw:withdrawable.includes(a.status)});
  });
  r.get('/register/files/:slot',async(req,res)=>{
- const d=await getDraft(db,req.session.draftId);const u=(await db.all('SELECT mime,body FROM gmf_uploads WHERE owner_id=? AND slot=?',[d.id,req.params.slot]))[0];if(!u)throw new FormError('File unavailable.',404);sendFile(res,u,req.params.slot);
+ const d=await getDraft(db,req.session.draftId);const u=(await db.all('SELECT mime,body FROM gmf_uploads WHERE owner_id=? AND slot=?',[d.id,req.params.slot]))[0];if(!u)throw new FormError('File unavailable.',404);sendFile(res,u,req.params.slot,d.data?.[2]?.full_name);
  });
  for(const kind of ['discard','withdraw']){
  const ownedId=req=>kind==='discard'?req.session.draftId:(req.session.submittedApplicationId||req.session.draftId);
@@ -61,7 +61,16 @@ export function publicRegistration(db,cfg){
  });
  return r;
 }
-function sendFile(res,u,slot){res.set({'Content-Type':u.mime,'Content-Disposition':`${slot==='photo'?'inline':'attachment'}; filename="${slot==='photo'?'photo':'document'}.${u.mime==='application/pdf'?'pdf':'jpg'}"`,'X-Content-Type-Options':'nosniff','Cache-Control':'no-store'});res.send(Buffer.from(u.body,'base64'));}
+function sendFile(res,u,slot,fullName){
+ const clean=value=>String(value||'').replace(/[\x00-\x1f\x7f<>:"/\\|?*]/g,' ').replace(/\s+/g,' ').trim().replace(/[. ]+$/g,'').slice(0,150);
+ const name=clean(fullName)||'Applicant';
+ const type=({identity:'Identity',recommendation:'Recommendation',photo:'Photo'})[slot]||clean(slot)||'Document';
+ const extension=({'application/pdf':'pdf','image/png':'png','image/jpeg':'jpg'})[u.mime]||'bin';
+ res.attachment(`${name} - ${type}.${extension}`);
+ if(slot==='photo')res.set('Content-Disposition',res.get('Content-Disposition').replace(/^attachment/,'inline'));
+ res.set({'Content-Type':u.mime,'X-Content-Type-Options':'nosniff','Cache-Control':'no-store'});
+ res.send(Buffer.from(u.body,'base64'));
+}
 export function staffApplications(db){
  const r=express.Router();
  r.get('/applications/',async(req,res)=>{
@@ -80,7 +89,7 @@ export function staffApplications(db){
  r.post('/applications/:id/',async(req,res)=>{await reviewAction(db,res.locals.user.id,req.params.id,req.body);res.redirect(`/applications/${req.params.id}/`);});
  r.get('/applications/:id/files/:slot',async(req,res)=>{
  const a=await getApplication(db,req.params.id,res.locals.user);if(!can(res.locals.user,'contacts.view',a))throw new FormError('File unavailable.',404);
- const u=(await db.all('SELECT mime,body FROM gmf_uploads WHERE owner_id=? AND slot=?',[a.id,req.params.slot]))[0];if(!u)throw new FormError('File unavailable.',404);sendFile(res,u,req.params.slot);
+ const u=(await db.all('SELECT mime,body FROM gmf_uploads WHERE owner_id=? AND slot=?',[a.id,req.params.slot]))[0];if(!u)throw new FormError('File unavailable.',404);sendFile(res,u,req.params.slot,a.full_name);
  });
  return r;
 }
