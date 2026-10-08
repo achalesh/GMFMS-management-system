@@ -58,6 +58,12 @@ test('public HTTP wizard submits privately; reviewer may review but cannot appro
  await staff('/accounts/login/');assert.equal((await staff('/accounts/login/',{username:'reviewer',password:'test-password-123'})).status,302);assert.equal((await staff('/applications/')).status,200);assert.equal((await staff(`/applications/${row.id}/`)).status,200);assert.equal((await staff(`/applications/${row.id}/`,{action:'start_review',revision:'1'})).status,302);assert.equal((await staff(`/applications/${row.id}/`,{action:'approve',revision:'2',role:'PRIMARY',verified:'on'})).status,404);
  for(const sort of ['submitted','reference','name','panchayat','status']){const sorted=await staff(`/applications/?sort=${sort}&direction=asc`);assert.equal(sorted.status,200);assert.ok(sorted.text.includes(`value="${sort}" selected`));}
  assert.equal((await staff('/applications/?sort=invalid&direction=invalid')).status,200);
+ await db.run("UPDATE gmf_applications SET status='SUBMITTED' WHERE id=?",[row.id]);
+ const submittedList=await staff('/applications/?status=submitted');assert.ok(submittedList.text.includes(`/applications/${row.id}/`));
+ for(const status of ['approved','other'])assert.ok(!(await staff(`/applications/?status=${status}`)).text.includes(`/applications/${row.id}/`));
+ await db.run("UPDATE gmf_applications SET status='APPROVED' WHERE id=?",[row.id]);assert.ok((await staff('/applications/?status=approved')).text.includes(`/applications/${row.id}/`));
+ await db.run("UPDATE gmf_applications SET status='CORRECTION_REQUIRED' WHERE id=?",[row.id]);assert.ok((await staff('/applications/?status=other')).text.includes(`/applications/${row.id}/`));
+ await db.run("UPDATE gmf_applications SET status='UNDER_REVIEW' WHERE id=?",[row.id]);
  const download=await staff(`/applications/${row.id}/files/photo`);assert.equal(download.status,200);assert.match(download.headers.get('content-disposition'),/^inline; filename="QA Applicant - Photo.jpg"/);
  await db.run('UPDATE gmf_applications SET full_name=? WHERE id=?',['കേരളം / Applicant',row.id]);
  const unicodeDownload=await staff(`/applications/${row.id}/files/photo`);assert.match(unicodeDownload.headers.get('content-disposition'),/filename\*=UTF-8''/);assert.ok(decodeURIComponent(unicodeDownload.headers.get('content-disposition')).includes('കേരളം Applicant - Photo.jpg'));

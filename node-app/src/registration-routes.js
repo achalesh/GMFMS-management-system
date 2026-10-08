@@ -78,9 +78,10 @@ export function staffApplications(db){
  const columns={submitted:'a.submitted_at',reference:'a.number',name:'LOWER(a.full_name)',panchayat:'LOWER(p.name)',status:'a.status'};
  const sort=Object.hasOwn(columns,req.query.sort)?req.query.sort:'submitted';
  const direction=['asc','desc'].includes(req.query.direction)?req.query.direction:(sort==='submitted'?'desc':'asc');
- const rows=(await db.all(applicationSelect+` ORDER BY ${columns[sort]} ${direction.toUpperCase()}, a.number ASC`)).filter(a=>can(res.locals.user,'applications.view',a));
+ const statusGroup=['submitted','approved','other'].includes(req.query.status)?req.query.status:'all';
+ const rows=(await db.all(applicationSelect+` ORDER BY ${columns[sort]} ${direction.toUpperCase()}, a.number ASC`)).filter(a=>can(res.locals.user,'applications.view',a)).filter(a=>statusGroup==='all'||(statusGroup==='submitted'?a.status==='SUBMITTED':statusGroup==='approved'?a.status==='APPROVED':!['SUBMITTED','APPROVED'].includes(a.status)));
  if(!res.locals.user.superuser&&!res.locals.user.scopes?.some(s=>can({...res.locals.user,scopes:[s]},'applications.view',{district_code:s.district_code,block_code:s.block_code})))throw new FormError('Access denied.',403);
- res.render('applications',{rows,sortOptions,sort,direction});
+ res.render('applications',{rows,sortOptions,sort,direction,statusGroup});
  });
  r.get('/applications/:id/',async(req,res)=>{
  const a=await getApplication(db,req.params.id,res.locals.user),warnings=await duplicates(db,a);
