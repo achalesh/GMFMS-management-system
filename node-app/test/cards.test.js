@@ -6,7 +6,7 @@ import {database} from '../src/database.js';
 import {migrate} from '../src/schema.js';
 import {seed} from '../src/seed.js';
 import {config} from '../src/config.js';
-import {cardAction,cardState,verificationToken,lookup,publicProfile,hash} from '../src/cards.js';
+import {previewCard,bulkCards,cardAction,cardState,verificationToken,lookup,publicProfile,hash} from '../src/cards.js';
 import {registrySelect} from '../src/registry.js';
 import {createApp} from '../src/app.js';
 import {PDFDocument} from 'pdf-lib';
@@ -42,4 +42,16 @@ test('public verification is allowlisted, cookie-free and fails closed for inact
  }finally{if(server)await new Promise(r=>server.close(r));await db.close();}});
 test('card operators cannot rotate/revoke identities or issue outside their jurisdiction',async()=>{const db=await setup(),cfg=config({});try{
  await db.run("INSERT INTO gmf_users(id,username,email,password_hash) VALUES ('operator','operator','operator@example.invalid','unused')");await db.run("INSERT INTO gmf_scopes(id,user_id,role,scope,district_code) VALUES ('scope','operator','ID_CARD_OPERATOR','DISTRICT','KSD')");await assert.rejects(cardAction(db,cfg,'operator','f',issue));await db.run("UPDATE gmf_scopes SET district_code='TVM' WHERE id='scope'");const id=await cardAction(db,cfg,'operator','f',issue);await assert.rejects(cardAction(db,cfg,'operator','f',{action:'revoke',revision:2,card_id:id,reason:'Not permitted.'}));await assert.rejects(cardAction(db,cfg,'operator','f',{action:'rotate',revision:2,confirmed:'on',reason:'Not permitted.'}));
+ }finally{await db.close();}});
+
+test('preview and bulk PDF validate current cards, integrity and scoped authorization',async()=>{const db=await setup(),cfg=config({});try{
+ const id=await cardAction(db,cfg,'admin','f',issue);
+ const {loadUser}=await import('../src/policies.js');const admin=await loadUser(db,'admin');
+ assert.equal((await PDFDocument.load(await previewCard(db,cfg,admin,'f',id))).getPageCount(),2);
+ for(const [format,count] of [['pdf',2],['print_pdf',1]])assert.equal((await PDFDocument.load(await bulkCards(db,cfg,'admin',{card_ids:[id],format,reason:'Synthetic bulk download.'}))).getPageCount(),count);
+ await assert.rejects(bulkCards(db,cfg,'admin',{card_ids:[id,id],format:'pdf',reason:'Duplicate selection.'}));
+ await db.run("INSERT INTO gmf_users(id,username,email,password_hash) VALUES ('other','other','other@example.invalid','unused')");
+ await assert.rejects(previewCard(db,cfg,await loadUser(db,'other'),'f',id));await assert.rejects(bulkCards(db,cfg,'other',{card_ids:[id],format:'pdf',reason:'Unauthorized.'}));
+ await db.run("UPDATE gmf_facilitators SET status='SUSPENDED' WHERE id='f'");await assert.rejects(previewCard(db,cfg,admin,'f',id));await assert.rejects(bulkCards(db,cfg,'admin',{card_ids:[id],format:'pdf',reason:'Inactive.'}));
+ assert.equal((await db.all("SELECT COUNT(*) AS n FROM gmf_card_events WHERE action='bulk_downloaded'"))[0].n,2);
  }finally{await db.close();}});

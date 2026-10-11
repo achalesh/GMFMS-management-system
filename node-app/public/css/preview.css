@@ -8,3 +8,5 @@ body{background:#f4f7fa;color:#183248;font-family:system-ui,sans-serif}header{ba
 .private-file{max-width:100%}
 .private-image-preview{box-sizing:border-box;display:block;width:160px;height:200px;object-fit:contain;border:1px solid #d5dfe7;border-radius:6px;background:#f5f7fa}
 .private-document-preview{display:block;width:240px;max-width:100%;height:300px;border:1px solid #d5dfe7;border-radius:6px;background:#f5f7fa}
+
+.id-card-preview{display:block;width:480px;max-width:100%;height:360px;border:1px solid #d5dfe7;border-radius:6px}

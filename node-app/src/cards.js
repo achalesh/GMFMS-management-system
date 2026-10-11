@@ -1,3 +1,4 @@
+import {PDFDocument as MergePDF} from 'pdf-lib';
 import {settings} from './settings.js';
 import {randomBytes,randomUUID,createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
@@ -45,3 +46,27 @@ export async function publicProfile(db,f,cfg,token,cardToken){
  if(profile.is_authorized){const policy=(await settings(db,'system')).data,app=JSON.parse((await db.all('SELECT payload FROM gmf_applications WHERE id=?',[f.application_id]))[0].payload);if(policy.allow_public_mobile&&app.consent?.public_mobile&&app[2]?.mobile)profile.mobile=app[2].mobile;if(policy.allow_public_email&&app.consent?.public_email&&app[2]?.email)profile.email=app[2].email;if(policy.allow_public_social&&app.consent?.public_social){const social={};for(const key of ['facebook','instagram','youtube','twitter','linkedin','other_profile']){const value=app[4]?.[key];if(typeof value!=='string'||!value||value.length>250)continue;try{const url=new URL(value);if(['http:','https:'].includes(url.protocol)&&!url.username&&!url.password)social[key]=value;}catch{}}if(Object.keys(social).length)profile.social_profiles=social;}}
  return profile;
 }
+
+export async function previewCard(db,cfg,user,id,cardId){
+ const f=await facilitator(db,id,user,'cards.issue');
+ const card=(await db.all('SELECT * FROM gmf_cards WHERE id=? AND facilitator_id=?',[cardId,id]))[0];
+ if(!card||await cardState(db,card,f,cfg)!=='CURRENT')throw new FormError('Current card unavailable.',404);
+ const bytes=Buffer.from(card.pdf,'base64');if(hash(bytes)!==card.pdf_hash)throw new FormError('Stored card integrity check failed.');
+ return bytes;
+}
+export async function bulkCards(db,cfg,userId,input){return db.transaction(async tx=>{
+ await policyLock(tx);const user=await loadUser(tx,userId),note=reason(input);
+ const ids=typeof input.card_ids==='string'?[input.card_ids]:input.card_ids;
+ if(!Array.isArray(ids)||!ids.length||ids.length>100||ids.some(id=>typeof id!=='string')||new Set(ids).size!==ids.length)throw new FormError('Select between 1 and 100 cards.');
+ if(!['pdf','print_pdf'].includes(input.format))throw new FormError('Choose a valid PDF format.');
+ const merged=await MergePDF.create();
+ for(const id of ids){
+ const card=(await tx.all('SELECT * FROM gmf_cards WHERE id=?',[id]))[0];if(!card)throw new FormError('Card unavailable.',404);
+ const f=await facilitator(tx,card.facilitator_id,user,'cards.issue');
+ if(await cardState(tx,card,f,cfg)!=='CURRENT')throw new FormError('A selected card is no longer current. Reload the list.',409);
+ const bytes=Buffer.from(card[input.format],'base64');if(hash(bytes)!==card[input.format==='pdf'?'pdf_hash':'print_hash'])throw new FormError('Stored card integrity check failed.');
+ const document=await MergePDF.load(bytes);for(const page of await merged.copyPages(document,document.getPageIndices()))merged.addPage(page);
+ await event(tx,f,user,'bulk_downloaded',note,card.id);
+ }
+ return Buffer.from(await merged.save());
+});}
