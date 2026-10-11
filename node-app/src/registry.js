@@ -1,3 +1,4 @@
+import {bloodGroups} from './registration-fields.js';
 import {panchayatCapacity} from './member-rules.js';
 import {randomUUID} from 'node:crypto';
 import {FormError} from './registration-fields.js';
@@ -6,9 +7,9 @@ import {policyLock,getApplication,reviewAction} from './registration-services.js
 export const today=()=>new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Kolkata'});
 export const registrySelect=`SELECT f.*,COALESCE(m.revision,1) AS revision,COALESCE(m.ended,0) AS ended,COALESCE(m.reference,'') AS reference,COALESCE(m.notes,'') AS notes,b.code AS block_code,d.code AS district_code,p.name AS panchayat_name FROM gmf_facilitators f LEFT JOIN gmf_registry_meta m ON m.id=f.id JOIN gmf_panchayats p ON p.code=f.panchayat_code JOIN gmf_blocks b ON b.code=p.block_code JOIN gmf_districts d ON d.code=b.district_code`;
 export const effectiveStatus=f=>f.status==='ACTIVE'&&f.valid_until<today()?'EXPIRED':f.status;
-export async function facilitator(db,id,user,capability='facilitators.view'){const row=(await db.all(registrySelect+' WHERE f.id=?',[id]))[0];if(!row||!can(user,capability,row))throw new FormError('Facilitator unavailable.',404);return row;}
+export async function facilitator(db,id,user,capability='facilitators.view'){const row=(await db.all(registrySelect+' WHERE f.id=?',[id]))[0];if(!row||!can(user,capability,row))throw new FormError('Facilitator unavailable.',404);const app=(await db.all('SELECT payload FROM gmf_applications WHERE id=?',[row.application_id]))[0];row.blood_group=app?JSON.parse(app.payload)[2]?.blood_group||'':'';return row;}
 async function location(tx,code,user){const row=(await tx.all(`SELECT p.code,b.code AS block_code,d.code AS district_code FROM gmf_panchayats p JOIN gmf_blocks b ON b.code=p.block_code JOIN gmf_districts d ON d.code=b.district_code JOIN gmf_states s ON s.code=d.state_code WHERE p.code=? AND p.active=1 AND b.active=1 AND d.active=1 AND s.active=1`,[code]))[0];if(!row)throw new FormError('Select an active panchayat.');if(!can(user,'facilitators.change',row))throw new FormError('Target location is outside your jurisdiction.',403);return row;}
-const snapshot=f=>Object.fromEntries(['status','valid_until','panchayat_code','role','revision','ended','reference','notes'].map(k=>[k,f[k]]));
+const snapshot=f=>Object.fromEntries(['status','valid_until','panchayat_code','role','revision','ended','reference','notes','blood_group'].map(k=>[k,f[k]]));
 async function history(tx,f,actor,action,reason,old){await tx.run('INSERT INTO gmf_registry_history(id,facilitator_id,actor_id,action,reason,snapshot,created_at) VALUES (?,?,?,?,?,?,?)',[randomUUID(),f.id,actor,action,reason,JSON.stringify({old,new:snapshot(f)}),Date.now()]);await tx.run('INSERT INTO gmf_audit(id,user_id,action,created_at) VALUES (?,?,?,?)',[randomUUID(),actor,'facilitator.'+action,Date.now()]);}
 export async function registryAction(db,userId,id,input){return db.transaction(async tx=>{
  await policyLock(tx);const user=await loadUser(tx,userId),f=await facilitator(tx,id,user,'facilitators.change'),old=snapshot(f),action=input.action,reason=typeof input.reason==='string'?input.reason.trim():'';
@@ -25,6 +26,10 @@ export async function registryAction(db,userId,id,input){return db.transaction(a
  if(effectiveStatus(f)!=='ACTIVE'||f.ended)throw new FormError('Only active current appointments may transfer or change role.');
  const target=action==='transfer'?input.panchayat:f.panchayat_code;if(typeof target!=='string')throw new FormError('Choose a panchayat.');await location(tx,target,user);
  const role=action==='role'?input.role:f.role;if(!['PRIMARY','ASSISTANT','ADDITIONAL'].includes(role))throw new FormError('Choose a valid role.');if(target===f.panchayat_code&&role===f.role)throw new FormError('Choose a different panchayat or role.');f.panchayat_code=target;f.role=role;f.reference='';f.notes='';
+ }else if(action==='blood_group'){
+ if(!bloodGroups.includes(input.blood_group)||input.blood_group===f.blood_group)throw new FormError('Choose a different valid blood group.');
+ const app=(await tx.all('SELECT payload FROM gmf_applications WHERE id=?',[f.application_id]))[0],data=JSON.parse(app.payload);data[2].blood_group=input.blood_group;
+ await tx.run('UPDATE gmf_applications SET payload=?,revision=revision+1 WHERE id=?',[JSON.stringify(data),f.application_id]);f.blood_group=input.blood_group;
  }else if(action==='details'){
  if(f.ended)throw new FormError('Historical appointment details cannot be edited.');for(const [key,max] of [['reference',150],['notes',2000]]){if(typeof input[key]!=='string'||input[key].length>max)throw new FormError('Check the appointment reference and notes.');f[key]=input[key].trim();}if(f.reference===old.reference&&f.notes===old.notes)throw new FormError('Change the reference or notes before saving.');
  }else if(action==='replace'){

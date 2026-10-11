@@ -19,9 +19,17 @@ export function text(doc,value,x,y,width,height,size=8,color='#163747'){
  throw new FormError('Card text does not fit the print area. Use a shorter printable name or location.');
 }
 function draw(doc,s,portrait,qr,back,x=0,y=0){doc.save().translate(x,y);doc.rect(0,0,cardWidth,cardHeight).fill('#ffffff');doc.rect(0,0,cardWidth,31).fill('#12394a');doc.image(logoPath,7,3,{fit:[19,26]});text(doc,(s.brand||'Gramaswaraj').toUpperCase(),32,4,198,14,10,'#ffffff');text(doc,s.network||'Digital Media & Broadcasting Network',32,18,198,10,5.7,'#ffffff');
- if(!back){doc.image(portrait,10,40,{fit:[53,71]});text(doc,'MEDIA FACILITATOR',73,38,157,14,8,'#117d69');text(doc,s.name,73,52,157,27,10);if(s.name_ml)text(doc,s.name_ml,73,81,157,17,8);text(doc,s.number,73,100,157,13,8);text(doc,s.panchayat+' Grama Panchayat',10,116,220,18,7);text(doc,`${s.role} · Valid until ${s.valid_until}`,10,137,220,11,6.5);}
- else{doc.image(qr,8,39,{width:80,height:80});text(doc,'SCAN TO VERIFY CURRENT STATUS',97,40,133,24,7,'#117d69');text(doc,s.panchayat+' Grama Panchayat',97,65,133,25,7);text(doc,`${s.block} Block · ${s.district}`,97,91,133,26,6.5);text(doc,s.card_number,10,120,225,12,6.5);text(doc,`Issued ${s.issued_on} · Scan before accepting this card.`,10,134,225,12,6);}
- if(s.preview&&back)text(doc,'DEVELOPMENT PREVIEW',10,146,220,7,5,'#b00020');
+ if(!back){doc.image(portrait,10,40,{fit:[53,71]});text(doc,'MEDIA FACILITATOR',73,38,157,14,8,'#117d69');text(doc,s.name,73,52,157,27,10);if(s.name_ml)text(doc,s.name_ml,73,81,157,17,8);text(doc,s.number,73,100,157,13,8);text(doc,`Blood group: ${s.blood_group||'Not recorded'}`,73,110,157,10,6.5);text(doc,s.panchayat+' Grama Panchayat',10,123,220,13,7);text(doc,`${s.role} · Valid until ${s.valid_until}`,10,140,220,10,6.5);}
+ else{doc.image(qr,8,39,{width:72,height:72});text(doc,'SCAN TO VERIFY',8,111,77,7,5,'#117d69');
+ text(doc,s.organization||s.brand,89,37,143,18,6.5);
+ text(doc,s.address||'Address not configured',89,56,143,48,6);
+ text(doc,`${s.block} Block · ${s.district}`,89,105,143,16,6);
+ text(doc,s.website||'Website not configured',10,120,220,9,5.8);
+ text(doc,`Email: ${s.email||'Not configured'}`,10,130,220,9,5.8);
+ text(doc,`Contact: ${s.phone||'Not configured'}`,10,140,220,8,5.5);
+ text(doc,`${s.card_number} · Issued ${s.issued_on}`,10,148,220,6,4);
+ }
+ if(s.preview&&back)text(doc,'DEVELOPMENT PREVIEW',100,116,130,7,4,'#b00020');
  if(s.preview&&!back){doc.save().opacity(.20).rotate(-18,{origin:[cardWidth/2,cardHeight/2]});text(doc,'DEVELOPMENT PREVIEW',8,68,225,35,17,'#b00020');doc.restore();}
  doc.restore();}
 async function pdf(s,portrait,qr,print){return new Promise((resolve,reject)=>{const doc=new PDFDocument({autoFirstPage:false,margin:0,compress:true,info:{Title:'Gramaswaraj Media Facilitator ID Card',Author:'Gramaswaraj'}}),chunks=[];doc.on('data',c=>chunks.push(c));doc.on('error',reject);doc.on('end',()=>resolve(Buffer.concat(chunks)));try{doc.registerFont('CardText',fontPath);doc.registerFont('Latin',latinFontPath);if(print){doc.addPage({size:'A4',margin:0});text(doc,'Print at 100% / actual size. Cut along the card borders.',36,26,520,20,10);draw(doc,s,portrait,qr,false,36,64);draw(doc,s,portrait,qr,true,316,64);doc.strokeColor('#777777').lineWidth(.4).rect(36,64,cardWidth,cardHeight).rect(316,64,cardWidth,cardHeight).stroke();}else{for(const back of [false,true]){doc.addPage({size:[cardWidth,cardHeight],margin:0});draw(doc,s,portrait,qr,back);}}doc.end();}catch(e){doc.destroy();reject(e);}});}

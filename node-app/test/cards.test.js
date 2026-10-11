@@ -6,7 +6,7 @@ import {database} from '../src/database.js';
 import {migrate} from '../src/schema.js';
 import {seed} from '../src/seed.js';
 import {config} from '../src/config.js';
-import {previewCard,bulkCards,cardAction,cardState,verificationToken,lookup,publicProfile,hash} from '../src/cards.js';
+import {previewCard,bulkCards,source,cardAction,cardState,verificationToken,lookup,publicProfile,hash} from '../src/cards.js';
 import {registrySelect} from '../src/registry.js';
 import {createApp} from '../src/app.js';
 import {PDFDocument} from 'pdf-lib';
@@ -54,4 +54,14 @@ test('preview and bulk PDF validate current cards, integrity and scoped authoriz
  await assert.rejects(previewCard(db,cfg,await loadUser(db,'other'),'f',id));await assert.rejects(bulkCards(db,cfg,'other',{card_ids:[id],format:'pdf',reason:'Unauthorized.'}));
  await db.run("UPDATE gmf_facilitators SET status='SUSPENDED' WHERE id='f'");await assert.rejects(previewCard(db,cfg,admin,'f',id));await assert.rejects(bulkCards(db,cfg,'admin',{card_ids:[id],format:'pdf',reason:'Inactive.'}));
  assert.equal((await db.all("SELECT COUNT(*) AS n FROM gmf_card_events WHERE action='bulk_downloaded'"))[0].n,2);
+ }finally{await db.close();}});
+
+test('organization contacts and edited blood group invalidate old cards',async()=>{const db=await setup(),cfg=config({});try{
+ const {registryAction}=await import('../src/registry.js');
+ await db.run("UPDATE gmf_settings SET payload=? WHERE id='organization'",[JSON.stringify({address:'Sample Office, Main Road, Thiruvananthapuram, Kerala 695001',website:'https://gramaswaraj.in',email:'sample@example.invalid',phone:'+91 9000000000'})]);
+ const id=await cardAction(db,cfg,'admin','f',issue),card=(await db.all('SELECT * FROM gmf_cards WHERE id=?',[id]))[0];
+ assert.equal(JSON.parse(card.snapshot).website,'https://gramaswaraj.in');
+ await registryAction(db,'admin','f',{action:'blood_group',revision:2,blood_group:'O+',reason:'Verified blood group.'});
+ assert.equal((await source(db,await fget(db),cfg)).snapshot.blood_group,'O+');assert.equal(await cardState(db,card,await fget(db),cfg),'OUTDATED');
+ await assert.rejects(registryAction(db,'admin','f',{action:'blood_group',revision:3,blood_group:'invalid',reason:'Invalid.'}));
  }finally{await db.close();}});
