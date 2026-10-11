@@ -1,3 +1,4 @@
+import {config} from './config.js';
 import {uniqueContacts,panchayatCapacity} from './member-rules.js';
 import {settings} from './settings.js';
 import {randomUUID} from 'node:crypto';
@@ -36,7 +37,7 @@ export async function getApplication(db,id,user,capability='applications.view'){
  const a=(await db.all(applicationSelect+' WHERE a.id=?',[id]))[0];if(!a||!can(user,capability,a))throw new FormError('Application unavailable.',404);return {...a,data:JSON.parse(a.payload)};
 }
 export async function duplicates(db,a){return db.all(`SELECT number FROM gmf_applications WHERE id<>? AND (mobile=? OR (email<>'' AND email=?) OR (normalized_name=? AND panchayat_code=?))`,[a.id,a.mobile,a.email,a.normalized_name,a.panchayat_code]);}
-export async function reviewAction(db,userId,id,input){return db.transaction(async tx=>{
+export async function reviewAction(db,userId,id,input,cfg=config()){return db.transaction(async tx=>{
  const policy=await policyLock(tx),user=await loadUser(tx,userId);
  const transitions={start_review:['SUBMITTED','UNDER_REVIEW','applications.review'],approve:['UNDER_REVIEW','APPROVED','applications.approve'],reject:['UNDER_REVIEW','REJECTED','applications.approve']};
  const transition=transitions[input.action];if(!transition)throw new FormError('Unknown review action.');
@@ -58,4 +59,10 @@ export async function reviewAction(db,userId,id,input){return db.transaction(asy
  await tx.run('UPDATE gmf_applications SET status=?,revision=revision+1 WHERE id=?',[transition[1],id]);
  await tx.run('INSERT INTO gmf_review_events(id,application_id,actor_id,action,from_status,to_status,reason,created_at) VALUES (?,?,?,?,?,?,?,?)',[randomUUID(),id,user.id,input.action,a.status,transition[1],reason,Date.now()]);
  await tx.run('INSERT INTO gmf_audit(id,user_id,action,created_at) VALUES (?,?,?,?)',[randomUUID(),user.id,'application.'+input.action,Date.now()]);
+ if(input.action==='approve'){
+ const {issueCard}=await import('./cards.js');const {facilitator}=await import('./registry.js');
+ const row=(await tx.all('SELECT id FROM gmf_facilitators WHERE application_id=?',[id]))[0];
+ await issueCard(tx,cfg,user,await facilitator(tx,row.id,user,'cards.issue'),'Automatically generated after application approval.',false);
+ }
+
  });}

@@ -71,7 +71,7 @@ function sendFile(res,u,slot,fullName,preview=false){
  res.set({'Content-Type':u.mime,'X-Content-Type-Options':'nosniff','Cache-Control':'no-store'});
  res.send(Buffer.from(u.body,'base64'));
 }
-export function staffApplications(db){
+export function staffApplications(db,cfg){
  const r=express.Router();
  r.get('/applications/',async(req,res)=>{
  const sortOptions=[['submitted','Submission date'],['reference','Reference'],['name','Name'],['panchayat','Panchayat'],['status','Status']];
@@ -91,7 +91,7 @@ export function staffApplications(db){
  });
  r.get('/applications/:id/delete/',async(req,res)=>{const a=await getApplication(db,req.params.id,res.locals.user,'applications.delete');if(a.status!=='REJECTED'||(await db.all('SELECT id FROM gmf_facilitators WHERE application_id=?',[a.id])).length)throw new FormError('Only rejected applications without a facilitator record can be deleted.',409);res.render('application-delete',{application:a,reasons:deletionReasons,error:''});});
  r.post('/applications/:id/delete/',async(req,res)=>{try{await deleteRejectedApplication(db,res.locals.user.id,req.params.id,req.body);res.redirect('/applications/');}catch(e){if(!(e instanceof FormError)||e.status!==400)throw e;const a=await getApplication(db,req.params.id,res.locals.user,'applications.delete');res.status(400).render('application-delete',{application:a,reasons:deletionReasons,error:e.message});}});
- r.post('/applications/:id/',async(req,res)=>{await reviewAction(db,res.locals.user.id,req.params.id,req.body);res.redirect(`/applications/${req.params.id}/`);});
+ r.post('/applications/:id/',async(req,res)=>{await reviewAction(db,res.locals.user.id,req.params.id,req.body,cfg);res.redirect(`/applications/${req.params.id}/`);});
  r.get('/applications/:id/files/:slot',async(req,res)=>{
  const a=await getApplication(db,req.params.id,res.locals.user);if(!can(res.locals.user,'contacts.view',a))throw new FormError('File unavailable.',404);
  const u=(await db.all('SELECT mime,body FROM gmf_uploads WHERE owner_id=? AND slot=?',[a.id,req.params.slot]))[0];if(!u)throw new FormError('File unavailable.',404);sendFile(res,u,req.params.slot,a.full_name,req.query.preview==='1'&&['photo','recommendation','doc_recommendation'].includes(req.params.slot));

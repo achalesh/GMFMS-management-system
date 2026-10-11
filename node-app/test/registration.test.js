@@ -119,7 +119,7 @@ test('three-member cap protects concurrent approvals and releases a place after 
  const ids=[];for(let i=0;i<4;i++){const id=await ready(db,{...personal,mobile:String(9876543220+i)});await submit(db,id,6,{accuracy:'on',processing:'on',consent_version:'1.0'});await reviewAction(db,'admin',id,{action:'start_review',revision:1});ids.push(id);}
  const decision={action:'approve',revision:2,role:'ASSISTANT',verified:'on',acknowledge:'on',reason:'Verified synthetic applicant'};
  const outcomes=await Promise.allSettled(ids.map(id=>reviewAction(db,'admin',id,decision)));
- assert.equal(outcomes.filter(o=>o.status==='fulfilled').length,3);
+ assert.equal(outcomes.filter(o=>o.status==='fulfilled').length,3);assert.equal((await db.all('SELECT COUNT(*) AS n FROM gmf_cards'))[0].n,3);
  const pending=(await db.all("SELECT id FROM gmf_applications WHERE status='UNDER_REVIEW'"))[0];const f=(await db.all('SELECT id FROM gmf_facilitators'))[0];
  await registryAction(db,'admin',f.id,{action:'suspend',revision:1,reason:'Still occupies membership'});await assert.rejects(panchayatCapacity(db,'G01071'));
  await registryAction(db,'admin',f.id,{action:'revoke',revision:2,reason:'End membership permanently'});await reviewAction(db,'admin',pending.id,decision);
@@ -146,3 +146,11 @@ test('only super admin can delete a rejected application; contacts are released 
  const audit=(await db.all("SELECT d.changes,d.reason FROM gmf_audit_details d JOIN gmf_audit a ON a.id=d.id WHERE a.action='application.deleted'"))[0];assert.deepEqual(JSON.parse(audit.changes),{reference,previous_status:'REJECTED'});assert(!JSON.stringify(audit).includes('released@example.invalid'));
  }finally{await db.close();}
 });
+
+test('failed automatic card rendering rolls approval back completely',async()=>{const db=await setup();try{
+ await db.run("INSERT INTO gmf_users(id,username,email,password_hash,superuser) VALUES ('admin','admin','admin@example.invalid','unused',1)");
+ const id=await ready(db);await submit(db,id,6,consent);await reviewAction(db,'admin',id,{action:'start_review',revision:1});
+ await db.run("UPDATE gmf_uploads SET sha256='invalid' WHERE owner_id=? AND slot='photo'",[id]);
+ await assert.rejects(reviewAction(db,'admin',id,{action:'approve',revision:2,role:'PRIMARY',verified:'on'}),/integrity/);
+ assert.equal((await db.all('SELECT status FROM gmf_applications WHERE id=?',[id]))[0].status,'UNDER_REVIEW');assert.equal((await db.all('SELECT COUNT(*) AS n FROM gmf_facilitators'))[0].n,0);assert.equal((await db.all('SELECT COUNT(*) AS n FROM gmf_cards'))[0].n,0);
+ }finally{await db.close();}});

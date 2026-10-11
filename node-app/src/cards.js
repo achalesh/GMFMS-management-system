@@ -27,12 +27,8 @@ function reason(input){if(typeof input.reason!=='string'||!input.reason.trim()||
 export async function cardAction(db,cfg,userId,id,input){return db.transaction(async tx=>{
  await policyLock(tx);const user=await loadUser(tx,userId),rotation=input.action==='rotate',f=await facilitator(tx,id,user,rotation?'facilitators.change':'cards.issue');if(f.revision!==Number(input.revision))throw new FormError('The facilitator changed. Reload before continuing.',409);const note=reason(input);
  if(input.action==='create_link'||rotation){if(rotation&&input.confirmed!=='on')throw new FormError('Confirm that existing links and QR codes will stop working.');if(!rotation&&await verificationToken(tx,id))throw new FormError('A verification link already exists.');await tx.run('DELETE FROM gmf_verification WHERE facilitator_id=?',[id]);await tx.run('INSERT INTO gmf_verification(facilitator_id,token) VALUES (?,?)',[id,randomBytes(32).toString('hex')]);await bump(tx,f);await event(tx,f,user,rotation?'token_rotated':'link_created',note);return;}
- if(input.action==='issue'){
- if(await authorization(tx,f)!=='ACTIVE')throw new FormError('Only active approved facilitators can receive a card.');if(!await verificationToken(tx,id))await tx.run('INSERT INTO gmf_verification(facilitator_id,token) VALUES (?,?)',[id,randomBytes(32).toString('hex')]);
- const {snapshot,digest,portrait}=await source(tx,f,cfg),photo=Buffer.from(portrait.body,'base64');if(hash(photo)!==portrait.sha256)throw new FormError('Portrait integrity check failed.');
- const version=Number((await tx.all('SELECT MAX(version) AS n FROM gmf_cards WHERE facilitator_id=?',[id]))[0].n||0)+1,cardId=randomUUID(),token=randomBytes(32).toString('hex'),number=f.number+'-V'+String(version).padStart(3,'0');const cardSnapshot={...snapshot,card_number:number,issued_on:today(),version};const files=await renderCards(cardSnapshot,photo,snapshot.verification_url+'?card='+token);
- await tx.run("UPDATE gmf_cards SET status='SUPERSEDED' WHERE facilitator_id=? AND status='ISSUED'",[id]);await tx.run('INSERT INTO gmf_cards(id,facilitator_id,number,version,token,source_hash,snapshot,pdf,print_pdf,pdf_hash,print_hash,issued_on,valid_until) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',[cardId,id,number,version,token,digest,JSON.stringify(cardSnapshot),files.pdf.toString('base64'),files.print_pdf.toString('base64'),hash(files.pdf),hash(files.print_pdf),today(),f.valid_until]);await bump(tx,f);await event(tx,f,user,'issued',note,cardId);return cardId;
- }
+ if(input.action==='issue')return issueCard(tx,cfg,user,f,note);
+
  const card=(await tx.all('SELECT * FROM gmf_cards WHERE id=? AND facilitator_id=?',[input.card_id||'',id]))[0];if(!card)throw new FormError('Card unavailable.',404);
  if(input.action==='revoke'){if(!can(user,'facilitators.change',f))throw new FormError('Access denied.',403);if(card.status!=='ISSUED')throw new FormError('Only an issued card can be revoked.');await tx.run("UPDATE gmf_cards SET status='REVOKED' WHERE id=?",[card.id]);await bump(tx,f);await event(tx,f,user,'revoked',note,card.id);return;}
  if(input.action==='download'){if(await cardState(tx,card,f,cfg)!=='CURRENT')throw new FormError('This card is no longer current. Generate a new version.');if(!['pdf','print_pdf'].includes(input.format))throw new FormError('Choose a valid PDF format.');const bytes=Buffer.from(card[input.format],'base64');if(hash(bytes)!==card[input.format==='pdf'?'pdf_hash':'print_hash'])throw new FormError('Stored card integrity check failed.');await event(tx,f,user,'downloaded',note,card.id);return {bytes,number:card.number};}
@@ -70,3 +66,21 @@ export async function bulkCards(db,cfg,userId,input){return db.transaction(async
  }
  return Buffer.from(await merged.save());
 });}
+
+export async function issueCard(tx,cfg,user,f,note,bumpRevision=true){const id=f.id;
+ if(await authorization(tx,f)!=='ACTIVE')throw new FormError('Only active approved facilitators can receive a card.');if(!await verificationToken(tx,id))await tx.run('INSERT INTO gmf_verification(facilitator_id,token) VALUES (?,?)',[id,randomBytes(32).toString('hex')]);
+ const {snapshot,digest,portrait}=await source(tx,f,cfg),photo=Buffer.from(portrait.body,'base64');if(hash(photo)!==portrait.sha256)throw new FormError('Portrait integrity check failed.');
+ const version=Number((await tx.all('SELECT MAX(version) AS n FROM gmf_cards WHERE facilitator_id=?',[id]))[0].n||0)+1,cardId=randomUUID(),token=randomBytes(32).toString('hex'),number=f.number+'-V'+String(version).padStart(3,'0');const cardSnapshot={...snapshot,card_number:number,issued_on:today(),version};const files=await renderCards(cardSnapshot,photo,snapshot.verification_url+'?card='+token);
+ await tx.run("UPDATE gmf_cards SET status='SUPERSEDED' WHERE facilitator_id=? AND status='ISSUED'",[id]);await tx.run('INSERT INTO gmf_cards(id,facilitator_id,number,version,token,source_hash,snapshot,pdf,print_pdf,pdf_hash,print_hash,issued_on,valid_until) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',[cardId,id,number,version,token,digest,JSON.stringify(cardSnapshot),files.pdf.toString('base64'),files.print_pdf.toString('base64'),hash(files.pdf),hash(files.print_pdf),today(),f.valid_until]);if(bumpRevision)await bump(tx,f);await event(tx,f,user,'issued',note,cardId);return cardId;
+}
+
+export async function generateExistingCards(db,cfg,userId,input){
+ const ids=typeof input.facilitator_ids==='string'?[input.facilitator_ids]:input.facilitator_ids;
+ if(!Array.isArray(ids)||!ids.length||ids.length>100||ids.some(id=>typeof id!=='string')||new Set(ids).size!==ids.length)throw new FormError('Select between 1 and 100 facilitators.');
+ const note=reason(input);let generated=0;
+ for(const id of ids)await db.transaction(async tx=>{
+ await policyLock(tx);const user=await loadUser(tx,userId),f=await facilitator(tx,id,user,'cards.issue');
+ for(const card of await tx.all("SELECT * FROM gmf_cards WHERE facilitator_id=? AND status='ISSUED'",[id]))if(await cardState(tx,card,f,cfg)==='CURRENT')return;
+ await issueCard(tx,cfg,user,f,note);generated++;
+ });return generated;
+}

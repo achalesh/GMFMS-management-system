@@ -58,7 +58,7 @@ export async function createApp(db,cfg){
  app.use((req,res,next)=>res.locals.user?next():res.redirect('/accounts/login/'));
  app.use((req,res,next)=>res.locals.user.must_change&&req.path!=='/accounts/password/'?res.redirect('/accounts/password/'):next());
  app.use(administrationRoutes(db,cfg));
- app.use(staffApplications(db));
+ app.use(staffApplications(db,cfg));
  app.use(lifecycleStaff(db,cfg));
  app.use(staffCards(db,cfg));
  app.use(reportRoutes(db,cfg));

@@ -1,3 +1,4 @@
+import {config} from './config.js';
 import {bloodGroups} from './registration-fields.js';
 import {panchayatCapacity} from './member-rules.js';
 import {randomUUID} from 'node:crypto';
@@ -11,7 +12,7 @@ export async function facilitator(db,id,user,capability='facilitators.view'){con
 async function location(tx,code,user){const row=(await tx.all(`SELECT p.code,b.code AS block_code,d.code AS district_code FROM gmf_panchayats p JOIN gmf_blocks b ON b.code=p.block_code JOIN gmf_districts d ON d.code=b.district_code JOIN gmf_states s ON s.code=d.state_code WHERE p.code=? AND p.active=1 AND b.active=1 AND d.active=1 AND s.active=1`,[code]))[0];if(!row)throw new FormError('Select an active panchayat.');if(!can(user,'facilitators.change',row))throw new FormError('Target location is outside your jurisdiction.',403);return row;}
 const snapshot=f=>Object.fromEntries(['status','valid_until','panchayat_code','role','revision','ended','reference','notes','blood_group'].map(k=>[k,f[k]]));
 async function history(tx,f,actor,action,reason,old){await tx.run('INSERT INTO gmf_registry_history(id,facilitator_id,actor_id,action,reason,snapshot,created_at) VALUES (?,?,?,?,?,?,?)',[randomUUID(),f.id,actor,action,reason,JSON.stringify({old,new:snapshot(f)}),Date.now()]);await tx.run('INSERT INTO gmf_audit(id,user_id,action,created_at) VALUES (?,?,?,?)',[randomUUID(),actor,'facilitator.'+action,Date.now()]);}
-export async function registryAction(db,userId,id,input){return db.transaction(async tx=>{
+export async function registryAction(db,userId,id,input,cfg=config()){return db.transaction(async tx=>{
  await policyLock(tx);const user=await loadUser(tx,userId),f=await facilitator(tx,id,user,'facilitators.change'),old=snapshot(f),action=input.action,reason=typeof input.reason==='string'?input.reason.trim():'';
  if(f.revision!==Number(input.revision))throw new FormError('This facilitator changed. Reload before continuing.',409);
  if(!reason||reason.length>2000)throw new FormError('Provide a reason within 2,000 characters.');
@@ -36,7 +37,7 @@ export async function registryAction(db,userId,id,input){return db.transaction(a
  if(f.role!=='PRIMARY'||f.ended)throw new FormError('Replacement requires a current primary appointment.');
  const candidate=await getApplication(tx,input.replacement_id,user,'applications.approve');if(candidate.panchayat_code!==f.panchayat_code||candidate.status!=='UNDER_REVIEW')throw new FormError('Choose an application under review in the same panchayat.');
  f.status='REPLACED';f.ended=1;await tx.run("UPDATE gmf_facilitators SET status='REPLACED',primary_key=NULL WHERE id=?",[id]);
- await reviewAction({transaction:fn=>fn(tx)},userId,candidate.id,{action:'approve',revision:input.application_revision,role:'PRIMARY',verified:input.verified,acknowledge:input.acknowledge,reason});
+ await reviewAction({transaction:fn=>fn(tx)},userId,candidate.id,{action:'approve',revision:input.application_revision,role:'PRIMARY',verified:input.verified,acknowledge:input.acknowledge,reason},cfg);
  }else throw new FormError('Unknown registry action.');
  const primary=f.status==='ACTIVE'&&!f.ended&&f.valid_until>=today()&&f.role==='PRIMARY'?f.panchayat_code:null;
  if(primary){await tx.run('UPDATE gmf_facilitators SET primary_key=NULL WHERE primary_key=? AND valid_until<?',[primary,today()]);if((await tx.all('SELECT id FROM gmf_facilitators WHERE primary_key=? AND id<>?',[primary,id])).length)throw new FormError('This panchayat already has an active primary facilitator.',409);}

@@ -6,7 +6,7 @@ import {database} from '../src/database.js';
 import {migrate} from '../src/schema.js';
 import {seed} from '../src/seed.js';
 import {config} from '../src/config.js';
-import {previewCard,bulkCards,source,cardAction,cardState,verificationToken,lookup,publicProfile,hash} from '../src/cards.js';
+import {previewCard,bulkCards,generateExistingCards,source,cardAction,cardState,verificationToken,lookup,publicProfile,hash} from '../src/cards.js';
 import {registrySelect} from '../src/registry.js';
 import {createApp} from '../src/app.js';
 import {PDFDocument} from 'pdf-lib';
@@ -64,4 +64,12 @@ test('organization contacts and edited blood group invalidate old cards',async()
  await registryAction(db,'admin','f',{action:'blood_group',revision:2,blood_group:'O+',reason:'Verified blood group.'});
  assert.equal((await source(db,await fget(db),cfg)).snapshot.blood_group,'O+');assert.equal(await cardState(db,card,await fget(db),cfg),'OUTDATED');
  await assert.rejects(registryAction(db,'admin','f',{action:'blood_group',revision:3,blood_group:'invalid',reason:'Invalid.'}));
+ }finally{await db.close();}});
+
+test('existing approved card generation is repeat-safe and rejects unauthorized operators',async()=>{const db=await setup(),cfg=config({});try{
+ assert.equal(await generateExistingCards(db,cfg,'admin',{facilitator_ids:['f'],reason:'Generate existing member cards.'}),1);
+ assert.equal(await generateExistingCards(db,cfg,'admin',{facilitator_ids:['f'],reason:'Retry batch.'}),0);
+ assert.equal((await db.all('SELECT COUNT(*) AS n FROM gmf_cards'))[0].n,1);
+ await db.run("INSERT INTO gmf_users(id,username,email,password_hash) VALUES ('unauthorized','unauthorized','u@example.invalid','unused')");
+ await assert.rejects(generateExistingCards(db,cfg,'unauthorized',{facilitator_ids:['f'],reason:'Unauthorized.'}));
  }finally{await db.close();}});

@@ -3,7 +3,7 @@ import {budget} from './security.js';
 import {can} from './policies.js';
 import {facilitator,registrySelect} from './registry.js';
 import {FormError} from './registration-fields.js';
-import {lookup,publicProfile,verificationToken,cardAction,cardState,previewCard,bulkCards} from './cards.js';
+import {lookup,publicProfile,verificationToken,cardAction,cardState,previewCard,bulkCards,authorization,generateExistingCards} from './cards.js';
 import {qrPng} from './card-rendering.js';
 export function publicVerification(db,cfg){const r=express.Router();
  async function serve(req,res){res.set({'Cache-Control':'private, no-store, max-age=0','Referrer-Policy':'no-referrer','X-Robots-Tag':'noindex, nofollow, noarchive'});try{
@@ -14,9 +14,10 @@ export function publicVerification(db,cfg){const r=express.Router();
  r.get('/verify/:token/',serve);r.get('/verify/:token/portrait/',serve);r.get('/api/verify/:token/',serve);return r;}
 export function staffCards(db,cfg){const r=express.Router();
  r.get('/facilitators/cards/bulk/',async(req,res)=>{
- const rows=[];for(const f of await db.all(registrySelect+' ORDER BY f.full_name')){if(!can(res.locals.user,'cards.issue',f))continue;for(const card of await db.all("SELECT id,number,status,source_hash,valid_until FROM gmf_cards WHERE facilitator_id=? AND status='ISSUED'",[f.id])){if(await cardState(db,card,f,cfg)==='CURRENT')rows.push({...card,f});}}
- res.render('cards-bulk',{rows});
+ const rows=[],pending=[];for(const f of await db.all(registrySelect+' ORDER BY f.full_name')){if(!can(res.locals.user,'cards.issue',f))continue;let current=false;for(const card of await db.all("SELECT id,number,status,source_hash,valid_until FROM gmf_cards WHERE facilitator_id=? AND status='ISSUED'",[f.id])){if(await cardState(db,card,f,cfg)==='CURRENT'){rows.push({...card,f});current=true;}}if(!current&&await authorization(db,f)==='ACTIVE')pending.push(f);}
+ res.render('cards-bulk',{rows,pending});
  });
+ r.post('/facilitators/cards/generate/',async(req,res)=>{await generateExistingCards(db,cfg,res.locals.user.id,req.body);res.redirect('/facilitators/cards/bulk/');});
  r.post('/facilitators/cards/bulk/',async(req,res)=>{const bytes=await bulkCards(db,cfg,res.locals.user.id,req.body);res.set('Cache-Control','no-store');res.attachment('Gramaswaraj-ID-cards-'+req.body.format+'.pdf').type('pdf').send(bytes);});
  r.get('/facilitators/:id/cards/:cardId/preview/',async(req,res)=>{const bytes=await previewCard(db,cfg,res.locals.user,req.params.id,req.params.cardId);res.set({'Cache-Control':'no-store','Content-Disposition':'inline; filename="ID-card-preview.pdf"'}).type('pdf').send(bytes);});
 
