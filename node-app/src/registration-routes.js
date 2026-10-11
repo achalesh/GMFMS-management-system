@@ -33,7 +33,7 @@ export function publicRegistration(db,cfg){
  async function renderStep(req,res,step,error='',values){
  const d=await getDraft(db,req.session.draftId);if(d.submitted)return res.redirect('/register/complete/');if(step>d.completed+1)throw new FormError('Complete the previous steps first.');
  const locations=step===1?await db.all(`SELECT p.code,p.name,b.code AS block_code,b.name AS block_name,d.code AS district_code,d.name AS district_name FROM gmf_panchayats p JOIN gmf_blocks b ON b.code=p.block_code JOIN gmf_districts d ON d.code=b.district_code JOIN gmf_states s ON s.code=d.state_code WHERE p.active=1 AND b.active=1 AND d.active=1 AND s.active=1 ORDER BY d.name,b.name,p.name`):[];
- const uploads=await db.all('SELECT slot FROM gmf_uploads WHERE owner_id=?',[d.id]);const policy=(await db.all('SELECT consent_version FROM gmf_registration_policy WHERE id=1'))[0];
+ const uploads=await db.all('SELECT slot,mime FROM gmf_uploads WHERE owner_id=?',[d.id]);const policy=(await db.all('SELECT consent_version FROM gmf_registration_policy WHERE id=1'))[0];
  const selected=d.data[1]||{};const reviewLocation=(await db.all('SELECT d.name AS district,b.name AS block,p.name AS panchayat FROM gmf_panchayats p JOIN gmf_blocks b ON b.code=p.block_code JOIN gmf_districts d ON d.code=b.district_code WHERE p.code=? AND b.code=? AND d.code=?',[selected.panchayat||'',selected.block||'',selected.district||'']))[0]||{};
  res.render('register-step',{step,reviewLocation,draft:d,values:values||d.data[step]||{},fields:fields[step]||[],titles,catalog,locations,uploads:uploads.map(u=>u.slot),error,requiredDocuments:(await settings(db,'system')).data.required_documents,version:policy.consent_version});
  }
@@ -61,13 +61,13 @@ export function publicRegistration(db,cfg){
  });
  return r;
 }
-function sendFile(res,u,slot,fullName){
+function sendFile(res,u,slot,fullName,preview=false){
  const clean=value=>String(value||'').replace(/[\x00-\x1f\x7f<>:"/\\|?*]/g,' ').replace(/\s+/g,' ').trim().replace(/[. ]+$/g,'').slice(0,150);
  const name=clean(fullName)||'Applicant';
- const type=({identity:'Identity',recommendation:'Recommendation',photo:'Photo'})[slot]||clean(slot)||'Document';
+ const type=({identity:'Identity',recommendation:'Recommendation',photo:'Photo'})[slot.replace(/^doc_/,'')]||clean(slot)||'Document';
  const extension=({'application/pdf':'pdf','image/png':'png','image/jpeg':'jpg'})[u.mime]||'bin';
  res.attachment(`${name} - ${type}.${extension}`);
- if(slot==='photo')res.set('Content-Disposition',res.get('Content-Disposition').replace(/^attachment/,'inline'));
+ if(slot==='photo'||preview)res.set('Content-Disposition',res.get('Content-Disposition').replace(/^attachment/,'inline'));
  res.set({'Content-Type':u.mime,'X-Content-Type-Options':'nosniff','Cache-Control':'no-store'});
  res.send(Buffer.from(u.body,'base64'));
 }
@@ -86,7 +86,7 @@ export function staffApplications(db){
  r.get('/applications/:id/',async(req,res)=>{
  const a=await getApplication(db,req.params.id,res.locals.user),warnings=await duplicates(db,a);
  const events=await db.all('SELECT action,from_status,to_status,reason,created_at FROM gmf_review_events WHERE application_id=? ORDER BY created_at',[a.id]);
- const uploads=await db.all('SELECT slot FROM gmf_uploads WHERE owner_id=?',[a.id]);const facilitator=(await db.all('SELECT number,role,valid_until FROM gmf_facilitators WHERE application_id=?',[a.id]))[0];
+ const uploads=await db.all('SELECT slot,mime FROM gmf_uploads WHERE owner_id=?',[a.id]);const facilitator=(await db.all('SELECT number,role,valid_until FROM gmf_facilitators WHERE application_id=?',[a.id]))[0];
  res.render('application-detail',{correctionChoices,application:a,fields,catalog,events,uploads,facilitator,warnings:warnings.length,canDelete:can(res.locals.user,'applications.delete',a)&&a.status==='REJECTED'&&!facilitator,canReview:can(res.locals.user,'applications.review',a),canApprove:can(res.locals.user,'applications.approve',a),canContacts:can(res.locals.user,'contacts.view',a)});
  });
  r.get('/applications/:id/delete/',async(req,res)=>{const a=await getApplication(db,req.params.id,res.locals.user,'applications.delete');if(a.status!=='REJECTED'||(await db.all('SELECT id FROM gmf_facilitators WHERE application_id=?',[a.id])).length)throw new FormError('Only rejected applications without a facilitator record can be deleted.',409);res.render('application-delete',{application:a,reasons:deletionReasons,error:''});});
@@ -94,7 +94,7 @@ export function staffApplications(db){
  r.post('/applications/:id/',async(req,res)=>{await reviewAction(db,res.locals.user.id,req.params.id,req.body);res.redirect(`/applications/${req.params.id}/`);});
  r.get('/applications/:id/files/:slot',async(req,res)=>{
  const a=await getApplication(db,req.params.id,res.locals.user);if(!can(res.locals.user,'contacts.view',a))throw new FormError('File unavailable.',404);
- const u=(await db.all('SELECT mime,body FROM gmf_uploads WHERE owner_id=? AND slot=?',[a.id,req.params.slot]))[0];if(!u)throw new FormError('File unavailable.',404);sendFile(res,u,req.params.slot,a.full_name);
+ const u=(await db.all('SELECT mime,body FROM gmf_uploads WHERE owner_id=? AND slot=?',[a.id,req.params.slot]))[0];if(!u)throw new FormError('File unavailable.',404);sendFile(res,u,req.params.slot,a.full_name,req.query.preview==='1'&&['photo','recommendation','doc_recommendation'].includes(req.params.slot));
  });
  return r;
 }

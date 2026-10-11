@@ -64,10 +64,15 @@ test('public HTTP wizard submits privately; reviewer may review but cannot appro
  await db.run("UPDATE gmf_applications SET status='APPROVED' WHERE id=?",[row.id]);assert.ok((await staff('/applications/?status=approved')).text.includes(`/applications/${row.id}/`));
  await db.run("UPDATE gmf_applications SET status='CORRECTION_REQUIRED' WHERE id=?",[row.id]);assert.ok((await staff('/applications/?status=other')).text.includes(`/applications/${row.id}/`));
  await db.run("UPDATE gmf_applications SET status='UNDER_REVIEW' WHERE id=?",[row.id]);
+ await db.run('INSERT INTO gmf_uploads(owner_id,slot,mime,body,sha256) VALUES (?,?,?,?,?)',[row.id,'doc_recommendation','application/pdf',Buffer.from(await (await PDFDocument.create()).save()).toString('base64'),'synthetic']);
+ const letterUrl=`/applications/${row.id}/files/doc_recommendation`;
+ assert.match((await staff(letterUrl)).headers.get('content-disposition'),/^attachment; filename="QA Applicant - Recommendation.pdf"/);
+ assert.match((await staff(letterUrl+'?preview=1')).headers.get('content-disposition'),/^inline;/);
+ const detail=await staff(`/applications/${row.id}/`);assert.ok(detail.text.includes('private-document-preview'));assert.ok(detail.text.includes('private-image-preview'));
  const download=await staff(`/applications/${row.id}/files/photo`);assert.equal(download.status,200);assert.match(download.headers.get('content-disposition'),/^inline; filename="QA Applicant - Photo.jpg"/);
  await db.run('UPDATE gmf_applications SET full_name=? WHERE id=?',['കേരളം / Applicant',row.id]);
  const unicodeDownload=await staff(`/applications/${row.id}/files/photo`);assert.match(unicodeDownload.headers.get('content-disposition'),/filename\*=UTF-8''/);assert.ok(decodeURIComponent(unicodeDownload.headers.get('content-disposition')).includes('കേരളം Applicant - Photo.jpg'));
- await db.run("UPDATE gmf_scopes SET district_code='KSD' WHERE id='scope'");assert.equal((await staff(`/applications/${row.id}/`)).status,404);assert.equal((await staff(`/applications/${row.id}/files/photo`)).status,404);
+ await db.run("UPDATE gmf_scopes SET district_code='KSD' WHERE id='scope'");assert.equal((await staff(`/applications/${row.id}/`)).status,404);assert.equal((await staff(`/applications/${row.id}/files/photo`)).status,404);assert.equal((await staff(letterUrl+'?preview=1')).status,404);
  }finally{if(server)await new Promise(r=>server.close(r));await db.close();}
 });
 
