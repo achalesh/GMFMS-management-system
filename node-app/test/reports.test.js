@@ -34,3 +34,12 @@ test('CSV/XLSX neutralize formula execution; PDF is complete and capped; audited
  for(const format of ['csv','xlsx','pdf']){const out=await generateExport(db,cfg,'mixed',{report:'facilitators'},{format,reason:'Synthetic QA export.'});assert(out.bytes.length>100);if(process.env.REPORT_QA_OUTPUT==='1'){await mkdir('var',{recursive:true});await writeFile('var/qa-report.'+format,out.bytes);}}
  assert.equal((await db.all('SELECT COUNT(*) AS n FROM gmf_report_exports'))[0].n,3);await assert.rejects(generateExport(db,cfg,'mixed',{}, {format:'csv',reason:''}));await assert.rejects(generateExport(db,cfg,'reviewer',{}, {format:'csv',reason:'Not permitted.'}));await db.run("UPDATE gmf_scopes SET active=0 WHERE id='m2'");await assert.rejects(generateExport(db,cfg,'mixed',{}, {format:'csv',reason:'Revoked export permission.'}));assert.equal((await db.all('SELECT COUNT(*) AS n FROM gmf_report_exports'))[0].n,3);
  }finally{await db.close();}});
+
+test('complete facilitator exports contain full details and embedded QR images within export scope',async()=>{const db=await setup(),cfg=config({});try{
+ for(const id of ['t','a','k'])await db.run('INSERT INTO gmf_verification(facilitator_id,token) VALUES (?,?)',[id,({t:'a',a:'b',k:'c'})[id].repeat(64)]);
+ const user=await loadUser(db,'mixed');const report=await reportData(db,user,{report:'facilitator_details'},true,cfg);assert.equal(report.rows.length,2);assert.ok(report.headers.includes('Blood group (if known)'));assert.ok(JSON.stringify(report.rows).includes('PRIVATE ADDRESS'));assert.ok(!JSON.stringify(report).includes('Synthetic KSD Name'));
+ await assert.rejects(reportData(db,await loadUser(db,'operator'),{report:'facilitator_details'},false,cfg));
+ const xlsx=await generateExport(db,cfg,'mixed',{report:'facilitator_details'},{format:'xlsx',reason:'QR printing report.'});const workbook=new ExcelJS.Workbook();await workbook.xlsx.load(xlsx.bytes);assert.equal(workbook.getWorksheet('Report').getImages().length,2);
+ const pdf=await generateExport(db,cfg,'mixed',{report:'facilitator_details'},{format:'pdf',reason:'Print full facilitator details.'});assert.ok((await PDFDocument.load(pdf.bytes)).getPageCount()>=2);
+ await mkdir('var/report-details-qa',{recursive:true});await writeFile('var/report-details-qa/details.pdf',pdf.bytes);
+ }finally{await db.close();}});

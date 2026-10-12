@@ -1,6 +1,6 @@
 import ExcelJS from 'exceljs';
 import PDFDocument from 'pdfkit';
-import {fontPath,latinFontPath,logoPath,text} from './card-rendering.js';
+import {fontPath,latinFontPath,logoPath,text,qrPng} from './card-rendering.js';
 import {FormError} from './registration-fields.js';
 export const csvSafe=value=>typeof value==='string'&&/^[\s\u0000-\u001f]*[=+@-]/u.test(value)?"'"+value:value;
 export function csvBytes(report){const quote=value=>'"'+String(csvSafe(value)??'').replaceAll('"','""')+'"';return Buffer.from('\uFEFF'+[report.headers,...report.rows].map(row=>row.map(quote).join(',')).join('\r\n')+'\r\n','utf8');}
@@ -11,10 +11,12 @@ export async function xlsxBytes(report,description){
  sheet.addRow([]);const header=sheet.addRow(report.headers);header.height=26;header.eachCell(cell=>{cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF12394A'}};cell.font={name:'Calibri',bold:true,color:{argb:'FFFFFFFF'}};cell.alignment={wrapText:true,vertical:'middle'};});
  for(const [index,row] of report.rows.entries()){const added=sheet.addRow(row.map(v=>typeof v==='number'?v:String(v??'')));added.eachCell(cell=>{cell.font={name:'Calibri',size:11};cell.alignment={wrapText:true,vertical:'top'};if(index%2===1)cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFF0F5F6'}};});}
  sheet.columns.forEach((column,index)=>{const lengths=report.rows.slice(0,200).map(row=>String(row[index]??'').length);column.width=Math.min(44,Math.max(14,report.headers[index].length+2,...lengths.map(n=>n+2)));});for(let r=5;r<=sheet.rowCount;r++){const row=sheet.getRow(r);let lines=1;row.eachCell((cell,index)=>{const value=String(cell.value??'');const units=[...value].reduce((n,ch)=>n+(ch.codePointAt(0)>127?1.6:1),0);lines=Math.max(lines,Math.ceil(units/Math.max(8,sheet.getColumn(index).width-2)));});row.height=Math.max(20,lines*15+4);}
+ if(report.printProfiles?.length){const col=report.headers.length-1;sheet.getColumn(col+1).width=18;for(const [index,profile] of report.printProfiles.entries()){if(profile.photo){const portrait=workbook.addImage({buffer:Buffer.from(profile.photo,'base64'),extension:'jpeg'});sheet.getColumn(col).width=15;sheet.getRow(index+5).height=Math.max(85,sheet.getRow(index+5).height);sheet.addImage(portrait,{tl:{col:col-1,row:index+4},ext:{width:70,height:100},editAs:'oneCell'});}if(!profile.url)continue;const image=workbook.addImage({buffer:await qrPng(profile.url),extension:'png'});sheet.getRow(index+5).height=Math.max(85,sheet.getRow(index+5).height);sheet.addImage(image,{tl:{col,row:index+4},ext:{width:105,height:105},editAs:'oneCell'});}}
  sheet.autoFilter={from:{row:4,column:1},to:{row:4,column:report.headers.length}};
  sheet.pageSetup={orientation:'landscape',paperSize:9,fitToPage:true,fitToWidth:1,fitToHeight:0};sheet.printTitlesRow='1:4';return Buffer.from(await workbook.xlsx.writeBuffer());
 }
 export async function pdfBytes(report,description){
+ if(report.printProfiles?.length)return completePdf(report,description);
  if(report.rows.length>500)throw new FormError('PDF reports support up to 500 rows. Narrow the filters or choose Excel / CSV.');
  return new Promise((resolve,reject)=>{const doc=new PDFDocument({autoFirstPage:false,margin:0,bufferPages:true,info:{Title:'Gramaswaraj — '+report.title,Author:'Gramaswaraj'}}),chunks=[];doc.on('data',c=>chunks.push(c));doc.on('error',reject);doc.on('end',()=>resolve(Buffer.concat(chunks)));
  try{doc.registerFont('CardText',fontPath);doc.registerFont('Latin',latinFontPath);const width=769.89,weights=report.headers.map(h=>/Name|Panchayat|Skills|Equipment/.test(h)?1.5:1),sum=weights.reduce((a,b)=>a+b,0),widths=weights.map(w=>width*w/sum);let y=0,page=0;
@@ -24,3 +26,20 @@ export async function pdfBytes(report,description){
  }catch(error){doc.destroy();reject(error instanceof FormError?new FormError('Some report text cannot fit or is unsupported by the PDF fonts. Choose Excel / CSV for the complete data.'):error);}});
 }
 export async function exportBytes(format,report,description){if(format==='csv')return {bytes:csvBytes(report),mime:'text/csv; charset=utf-8'};if(format==='xlsx')return {bytes:await xlsxBytes(report,description),mime:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'};if(format==='pdf')return {bytes:await pdfBytes(report,description),mime:'application/pdf'};throw new FormError('Choose Excel, CSV or PDF.');}
+
+async function completePdf(report,description){
+ const qrImages=await Promise.all(report.printProfiles.map(profile=>profile.url?qrPng(profile.url):null));
+ return new Promise((resolve,reject)=>{const doc=new PDFDocument({autoFirstPage:false,margin:0,bufferPages:true}),chunks=[];doc.on('data',chunk=>chunks.push(chunk));doc.on('error',reject);doc.on('end',()=>resolve(Buffer.concat(chunks)));
+ try{doc.registerFont('CardText',fontPath);doc.registerFont('Latin',latinFontPath);
+ for(const [index,profile] of report.printProfiles.entries()){
+ const newPage=()=>{doc.addPage({size:'A4',margin:0});doc.image(logoPath,36,25,{fit:[24,34]});text(doc,'GRAMASWARAJ · Facilitator details',70,27,480,24,13);text(doc,profile.name+' · '+profile.number,36,68,520,34,11);};newPage();
+ text(doc,description,36,108,285,70,7);if(profile.photo)doc.image(Buffer.from(profile.photo,'base64'),340,108,{fit:[70,90]});if(qrImages[index]){doc.image(qrImages[index],440,100,{width:112,height:112});text(doc,'ID card verification QR',425,213,135,16,7);}else text(doc,'Generate an ID card to obtain its QR code.',340,108,200,45,8);
+ let y=240;
+ report.headers.forEach((label,column)=>{if(['QR code','Photograph'].includes(label))return;const value=String(profile.values[column]??'')||'—';const units=[...value].reduce((n,ch)=>n+(ch.codePointAt(0)>127?1.5:1),0);const height=Math.max(23,Math.ceil(units/65)*12+8,Math.ceil(label.length/24)*12+8);if(y+height>785){newPage();y=115;}
+ text(doc,label,36,y,135,height,8,'#117d69');text(doc,value,179,y,375,height,8);y+=height;
+ });
+ }
+ const pages=doc.bufferedPageRange();for(let i=0;i<pages.count;i++){doc.switchToPage(i);text(doc,`Private facilitator report · Page ${i+1} of ${pages.count}`,36,809,520,12,7);}
+ doc.end();}catch(error){doc.destroy();reject(error);}
+ });
+}
