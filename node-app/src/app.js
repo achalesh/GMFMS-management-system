@@ -1,3 +1,4 @@
+import {bilingual} from './registration-language.js';
 import express from 'express';
 import {administrationRoutes} from './administration-routes.js';
 import {settings} from './settings.js';
@@ -30,6 +31,7 @@ export async function createApp(db,cfg){
  res.locals.user=req.session.userId?await loadUser(db,req.session.userId):null;
  res.locals.csrf=csrfToken(req.session);
  res.locals.organization=(await settings(db,'organization')).data;
+ res.locals.bi=bilingual;res.locals.registrationBilingual=req.path.startsWith('/register/');
  res.locals.can=cap=>can(res.locals.user,cap);
  next();
  });
