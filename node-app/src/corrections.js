@@ -7,10 +7,11 @@ export const correctionChoices=[...Object.values(fields).flat().map(f=>[f.name,f
 export const digest=raw=>createHash('sha256').update(raw).digest('hex');
 async function event(tx,a,actor,action,target,reason){await tx.run('INSERT INTO gmf_review_events(id,application_id,actor_id,action,from_status,to_status,reason,created_at) VALUES (?,?,?,?,?,?,?,?)',[randomUUID(),a.id,actor||'APPLICANT',action,a.status,target,reason,Date.now()]);await tx.run('INSERT INTO gmf_audit(id,user_id,action,created_at) VALUES (?,?,?,?)',[randomUUID(),actor,'application.'+action,Date.now()]);}
 export async function requestCorrection(db,userId,id,input){return db.transaction(async tx=>{
- await policyLock(tx);const a=await getApplication(tx,id,await loadUser(tx,userId),'applications.review');
+ await policyLock(tx);const user=await loadUser(tx,userId),a=await getApplication(tx,id,user,'applications.review');
  if(a.revision!==Number(input.revision))throw new FormError('This application changed. Reload before continuing.',409);
  const action=input.action,reason=typeof input.reason==='string'?input.reason.trim():'';
  if(!reason||reason.length>2000)throw new FormError('Provide correction instructions or a reason within 2,000 characters.');
+ if(a.status==='APPROVED'){if(!['request_correction','renew_correction','cancel_correction'].includes(action))throw new FormError('Unknown correction action.');return (await import('./approved-corrections.js')).requestApprovedCorrection(tx,user,a,input);}
  if(!['request_correction','renew_correction','cancel_correction'].includes(action)||a.status!==(action==='request_correction'?'UNDER_REVIEW':'CORRECTION_REQUIRED'))throw new FormError('This correction action is unavailable.',409);
  let allowed=typeof input.allowed_fields==='string'?[input.allowed_fields]:input.allowed_fields;
  if(action==='renew_correction'){const old=(await tx.all('SELECT fields FROM gmf_corrections WHERE application_id=? ORDER BY expires_at DESC',[id]))[0];if(!old)throw new FormError('No correction request exists.');allowed=JSON.parse(old.fields);}
@@ -23,8 +24,8 @@ export async function requestCorrection(db,userId,id,input){return db.transactio
  });}
 export async function correctionTicket(db,hash){
  if(typeof hash!=='string'||!/^[a-f0-9]{64}$/.test(hash))throw new FormError('Correction link unavailable or expired.',410);
- const row=(await db.all(`SELECT c.*,a.payload,a.revision,a.status FROM gmf_corrections c JOIN gmf_applications a ON a.id=c.application_id WHERE c.digest=? AND c.used=0 AND c.expires_at>? AND a.status='CORRECTION_REQUIRED'`,[hash,Date.now()]))[0];if(!row)throw new FormError('Correction link unavailable or expired.',410);
- return {...row,allowed:JSON.parse(row.fields),data:JSON.parse(row.payload)};
+ const row=(await db.all(`SELECT c.*,a.payload,a.revision,a.status FROM gmf_corrections c JOIN gmf_applications a ON a.id=c.application_id WHERE c.digest=? AND c.used=0 AND c.expires_at>? AND (a.status='CORRECTION_REQUIRED' OR (a.status='APPROVED' AND EXISTS (SELECT 1 FROM gmf_approved_corrections ac WHERE ${db.dialect==='mysql'?'CAST(ac.id AS BINARY)=CAST(c.id AS BINARY)':'ac.id=c.id'} AND ac.state='OPEN')))`,[hash,Date.now()]))[0];if(!row)throw new FormError('Correction link unavailable or expired.',410);
+ return {...row,approvedCorrection:row.status==='APPROVED',allowed:JSON.parse(row.fields),data:JSON.parse(row.payload)};
 }
 export async function applyCorrection(db,hash,input,uploads={}){return db.transaction(async tx=>{
  const policy=await policyLock(tx),ticket=await correctionTicket(tx,hash),data=ticket.data;
@@ -39,11 +40,15 @@ export async function applyCorrection(db,hash,input,uploads={}){return db.transa
  for(const [slot,u] of Object.entries(uploads)){
  if(!ticket.allowed.includes(slot)||!slots.includes(slot))throw new FormError('This file was not requested.');
  const old=(await tx.all('SELECT sha256 FROM gmf_uploads WHERE owner_id=? AND slot=?',[ticket.application_id,slot]))[0];if(old?.sha256===u.sha256)continue;
- await tx.run('DELETE FROM gmf_uploads WHERE owner_id=? AND slot=?',[ticket.application_id,slot]);await tx.run('INSERT INTO gmf_uploads(owner_id,slot,mime,body,sha256) VALUES (?,?,?,?,?)',[ticket.application_id,slot,u.mime,u.body,u.sha256]);changed.push(slot);
+ await tx.run('DELETE FROM gmf_uploads WHERE owner_id=? AND slot=?',[ticket.approvedCorrection?ticket.id:ticket.application_id,slot]);await tx.run('INSERT INTO gmf_uploads(owner_id,slot,mime,body,sha256) VALUES (?,?,?,?,?)',[ticket.approvedCorrection?ticket.id:ticket.application_id,slot,u.mime,u.body,u.sha256]);changed.push(slot);
  }
  if(!changed.length)throw new FormError('Make at least one requested correction before resubmitting.');
  await validateApplication(tx,ticket.application_id,data);await uniqueContacts(tx,data[2],ticket.application_id);
  data.consent={...data.consent,version:policy.consent_version,at:Date.now(),text:catalog.CONSENT,accuracy:true,processing:true};const personal=data[2];
+ if(ticket.approvedCorrection){
+ await tx.run("UPDATE gmf_approved_corrections SET payload=?,changed=?,state='SUBMITTED' WHERE id=? AND state='OPEN'",[JSON.stringify(data),JSON.stringify(changed),ticket.id]);
+ await tx.run('UPDATE gmf_corrections SET used=1 WHERE id=?',[ticket.id]);await event(tx,{id:ticket.application_id,status:'APPROVED'},null,'approved_correction_submitted','APPROVED','Corrected fields: '+changed.join(', '));return;
+ }
  await tx.run("UPDATE gmf_applications SET payload=?,full_name=?,normalized_name=?,mobile=?,email=?,status='SUBMITTED',revision=revision+1 WHERE id=?",[JSON.stringify(data),personal.full_name,personal.full_name.normalize('NFKC').toLowerCase().replace(/\s+/g,' ').trim(),personal.mobile,personal.email,ticket.application_id]);
  await tx.run('UPDATE gmf_corrections SET used=1 WHERE id=?',[ticket.id]);await event(tx,{id:ticket.application_id,status:ticket.status},null,'correction_resubmitted','SUBMITTED','Corrected fields: '+changed.join(', '));
  });}

@@ -84,3 +84,16 @@ export async function generateExistingCards(db,cfg,userId,input){
  await issueCard(tx,cfg,user,f,note);generated++;
  });return generated;
 }
+
+export async function refreshCorrectedCard(tx,cfg,user,f,note){
+ if(await authorization(tx,f)!=='ACTIVE')throw new FormError('Only active approved facilitators can have their card corrected.');
+ const card=(await tx.all("SELECT * FROM gmf_cards WHERE facilitator_id=? AND status='ISSUED' ORDER BY version DESC LIMIT 1",[f.id]))[0];
+ if(!card){if((await tx.all('SELECT id FROM gmf_cards WHERE facilitator_id=? LIMIT 1',[f.id])).length)return;return issueCard(tx,cfg,user,f,note);}
+ const {snapshot,digest,portrait}=await source(tx,f,cfg);if(digest===card.source_hash)return;
+ const photo=Buffer.from(portrait.body,'base64');if(hash(photo)!==portrait.sha256)throw new FormError('Portrait integrity check failed.');
+ const updated={...snapshot,card_number:card.number,issued_on:card.issued_on,version:card.version};
+ const files=await renderCards(updated,photo,snapshot.verification_url+'?card='+card.token);
+ await tx.run('INSERT INTO gmf_card_revisions(id,card_id,snapshot,pdf,print_pdf,pdf_hash,print_hash,source_hash,created_at) VALUES (?,?,?,?,?,?,?,?,?)',[randomUUID(),card.id,card.snapshot,card.pdf,card.print_pdf,card.pdf_hash,card.print_hash,card.source_hash,Date.now()]);
+ await tx.run('UPDATE gmf_cards SET source_hash=?,snapshot=?,pdf=?,print_pdf=?,pdf_hash=?,print_hash=?,valid_until=? WHERE id=?',[digest,JSON.stringify(updated),files.pdf.toString('base64'),files.print_pdf.toString('base64'),hash(files.pdf),hash(files.print_pdf),f.valid_until,card.id]);
+ await event(tx,f,user,'correction_reissued',note,card.id);
+}

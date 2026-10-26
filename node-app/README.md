@@ -90,3 +90,13 @@ To end membership permanently, open Facilitators, select the member, choose Revo
 ## Delete rejected applications
 
 Super Admins can permanently delete a rejected application from its detail page after selecting a reason, typing the exact reference and confirming. The transaction checks live permissions, revision, rejected status and absence of a linked facilitator. It removes the application, private uploads, draft, correction tickets and review events, freeing mobile/email for reuse. A minimal actor/time/reference/reason audit remains without applicant personal data. Existing separately retained backups and migration snapshots are not altered.
+
+## Corrections after approval
+
+Open the approved application, select the fields under **Applicant corrections**, provide instructions, and create the 48-hour correction link. The applicant uses that link to submit proposed changes. Approved data, membership and the existing card remain active while changes are pending.
+
+An administrator with application approval, facilitator change and card permissions compares current and proposed values, supplies a reason, and chooses **Approve corrections — keep numbers** or **Reject corrections — keep approved details**. No new application or facilitator record is created. Application reference, facilitator ID, full existing card number and verification tokens are preserved. Printed card changes refresh the same card PDF; its previous snapshot and PDFs are retained privately in `gmf_card_revisions`. Reprint the corrected card when printed details change. A revoked card is not automatically reinstated by this process.
+
+Correction requests are limited to active approved facilitators and exclude transfers, appointment roles and validity changes, which retain their existing registry workflows. Revisions, jurisdiction and duplicate contacts are checked again at approval. Changed records require cancellation and a fresh correction request. Rejecting/cancelling retains approved data and removes staged file copies.
+
+Schema 7 adds correction staging and card revision archive tables. Deployment from schema 6 upgrades these additive tables automatically on startup, preserving existing records and settings. Older schema upgrades still require the normal migration command.
