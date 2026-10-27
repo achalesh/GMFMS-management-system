@@ -1,3 +1,4 @@
+import {facilitatorAccountRoutes} from './facilitator-account-routes.js';
 import {bilingual} from './registration-language.js';
 import express from 'express';
 import {administrationRoutes} from './administration-routes.js';
@@ -55,10 +56,12 @@ export async function createApp(db,cfg){
  await new Promise((resolve,reject)=>req.session.save(e=>e?reject(e):resolve()));res.redirect('/');
  });
  app.post('/accounts/logout/',async(req,res)=>{if(res.locals.user)await audit(res.locals.user.id,'logout');await new Promise((resolve,reject)=>req.session.destroy(e=>e?reject(e):resolve()));res.clearCookie('gmf.sid');res.redirect('/accounts/login/');});
+ app.use((req,res,next)=>res.locals.user?.must_change&&req.path!=='/accounts/password/'?res.redirect('/accounts/password/'):next());
  app.use(publicRegistration(db,cfg));
  app.use(correctionPublic(db,cfg));
  app.use((req,res,next)=>res.locals.user?next():res.redirect('/accounts/login/'));
- app.use((req,res,next)=>res.locals.user.must_change&&req.path!=='/accounts/password/'?res.redirect('/accounts/password/'):next());
+ app.use((req,res,next)=>res.locals.user.facilitator_id&&req.path!=='/accounts/password/'&&!req.path.startsWith('/my/')?res.redirect('/my/'):next());
+ app.use(facilitatorAccountRoutes(db,cfg));
  app.use(administrationRoutes(db,cfg));
  app.use(staffApplications(db,cfg));
  app.use(lifecycleStaff(db,cfg));

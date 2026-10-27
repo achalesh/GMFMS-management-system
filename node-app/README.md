@@ -100,3 +100,13 @@ An administrator with application approval, facilitator change and card permissi
 Correction requests are limited to active approved facilitators and exclude transfers, appointment roles and validity changes, which retain their existing registry workflows. Revisions, jurisdiction and duplicate contacts are checked again at approval. Changed records require cancellation and a fresh correction request. Rejecting/cancelling retains approved data and removes staged file copies.
 
 Schema 7 adds correction staging and card revision archive tables. Deployment from schema 6 upgrades these additive tables automatically on startup, preserving existing records and settings. Older schema upgrades still require the normal migration command.
+
+## Facilitator usernames and temporary passwords
+
+Super Admin: open **Facilitators → facilitator → Allocate login / reset temporary password**. The username defaults to the existing facilitator number in lower case. Provide an email if available and an allocation reason. Leave both temporary password boxes blank to generate a secure password, or enter matching 12–256-character values. The temporary password appears once on the result page; share it privately. It is never stored as plaintext or included in audit records.
+
+The login is linked one-to-one to an active approved facilitator and is not a staff role. A missing optional email is represented by an internal non-deliverable account identifier. Existing staff accounts are never automatically reused. First sign-in requires changing the temporary password using it as the current password. The owner signs in again with the new password and sees only `/my/`: their own approved details, photograph and current ID card. Pending, inactive, expired or revoked cards cannot be downloaded. The facilitator cannot access other applications, member lists, reports, administration or other members’ files.
+
+A Super Admin can reset the temporary password from the same facilitator page, which terminates previous sessions and requires another password change. Account deactivation/reactivation remains in **Administration → Accounts**. Facilitator personal accounts cannot receive staff role assignments; create a separate staff account for administrative duties.
+
+Schema 8 adds only `gmf_facilitator_accounts`. Existing schema 6 or 7 deployments add the required tables automatically at startup without changing existing records, passwords or role assignments.

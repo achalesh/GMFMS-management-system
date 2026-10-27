@@ -1,6 +1,7 @@
-export const schemaVersion=7;
+export const schemaVersion=8;
 export async function migrate(db){
  const tables=[
+ `CREATE TABLE IF NOT EXISTS gmf_facilitator_accounts (user_id VARCHAR(36) PRIMARY KEY, facilitator_id VARCHAR(36) NOT NULL UNIQUE)`,
  `CREATE TABLE IF NOT EXISTS gmf_approved_corrections (id VARCHAR(36) PRIMARY KEY, application_id VARCHAR(36) NOT NULL, app_revision INTEGER NOT NULL, facilitator_revision INTEGER NOT NULL, state VARCHAR(20) NOT NULL DEFAULT 'OPEN', original_payload MEDIUMTEXT NOT NULL, payload MEDIUMTEXT NOT NULL, changed TEXT NOT NULL, created_at BIGINT NOT NULL)`,
  `CREATE TABLE IF NOT EXISTS gmf_card_revisions (id VARCHAR(36) PRIMARY KEY, card_id VARCHAR(36) NOT NULL, snapshot MEDIUMTEXT NOT NULL, pdf MEDIUMTEXT NOT NULL, print_pdf MEDIUMTEXT NOT NULL, pdf_hash VARCHAR(64) NOT NULL, print_hash VARCHAR(64) NOT NULL, source_hash VARCHAR(64) NOT NULL, created_at BIGINT NOT NULL)`,
  `CREATE TABLE IF NOT EXISTS gmf_account_meta (id VARCHAR(36) PRIMARY KEY, revision INTEGER NOT NULL DEFAULT 1, must_change INTEGER NOT NULL DEFAULT 0)`,

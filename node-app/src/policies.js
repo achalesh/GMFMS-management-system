@@ -4,7 +4,7 @@ const manage=['applications.approve','facilitators.change','cards.issue','report
 export const capabilities={SUPER_ADMIN:[...common,...review,...manage,'organization.change','system.change','accounts.manage','audit.view','locations.manage','applications.delete'],STATE_ADMIN:[...common,...review,...manage,'organization.change','audit.view'],DISTRICT_ADMIN:[...common,...review,...manage],BLOCK_COORDINATOR:[...common,...review],REVIEWER:[...common,...review],ID_CARD_OPERATOR:[...common,'cards.issue'],VIEWER:common};
 const globalOnly=new Set(['organization.change','system.change','accounts.manage','audit.view','locations.manage','applications.delete']);
 export function scopesFor(user,capability){
- if(!user?.active)return [];
+ if(!user?.active||user.facilitator_id)return [];
  return (user.scopes||[]).filter(s=>{
  if(!s.active||!capabilities[s.role]?.includes(capability))return false;
  if(['SUPER_ADMIN','STATE_ADMIN'].includes(s.role)&&s.scope!=='STATE')return false;
@@ -17,12 +17,13 @@ export function scopesFor(user,capability){
  });
 }
 export function can(user,capability,place){
- if(!user?.active||!Object.values(capabilities).some(v=>v.includes(capability)))return false;
+ if(!user?.active||user.facilitator_id||!Object.values(capabilities).some(v=>v.includes(capability)))return false;
  if(user.superuser)return true;
  return scopesFor(user,capability).some(s=>s.scope==='STATE'||(!globalOnly.has(capability)&&(place?s.district_code===place.district_code&&(s.scope==='DISTRICT'||s.block_code===place.block_code):['dashboard.view','locations.view'].includes(capability))));
 }
 export async function loadUser(db,id){
- const rows=await db.all('SELECT u.id,u.username,u.email,u.active,u.superuser,COALESCE(m.must_change,0) AS must_change FROM gmf_users u LEFT JOIN gmf_account_meta m ON m.id=u.id WHERE u.id=? AND u.active=1',[id]);
+ const accountMatch=db.dialect==='mysql'?'CAST(fa.user_id AS BINARY)=CAST(u.id AS BINARY)':'fa.user_id=u.id';
+ const rows=await db.all(`SELECT u.id,u.username,u.email,u.active,u.superuser,COALESCE(m.must_change,0) AS must_change,fa.facilitator_id FROM gmf_users u LEFT JOIN gmf_account_meta m ON m.id=u.id LEFT JOIN gmf_facilitator_accounts fa ON ${accountMatch} WHERE u.id=? AND u.active=1`,[id]);
  if(!rows[0])return null;
  const scopes=await db.all(`SELECT j.*, d.active AS district_active, s.active AS state_active, b.active AS block_active, b.district_code AS block_district FROM gmf_scopes j LEFT JOIN gmf_districts d ON d.code=j.district_code LEFT JOIN gmf_states s ON s.code=d.state_code LEFT JOIN gmf_blocks b ON b.code=j.block_code WHERE j.user_id=?`,[id]);
  return {...rows[0],scopes};
