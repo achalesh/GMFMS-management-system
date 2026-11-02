@@ -1,7 +1,7 @@
-const common=['dashboard.view','facilitators.view','locations.view'];
+const common=['trainings.view','dashboard.view','facilitators.view','locations.view'];
 const review=['applications.view','applications.review','contacts.view'];
-const manage=['applications.approve','facilitators.change','cards.issue','reports.export'];
-export const capabilities={SUPER_ADMIN:[...common,...review,...manage,'organization.change','system.change','accounts.manage','audit.view','locations.manage','applications.delete'],STATE_ADMIN:[...common,...review,...manage,'organization.change','audit.view'],DISTRICT_ADMIN:[...common,...review,...manage],BLOCK_COORDINATOR:[...common,...review],REVIEWER:[...common,...review],ID_CARD_OPERATOR:[...common,'cards.issue'],VIEWER:common};
+const manage=['trainings.manage','applications.approve','facilitators.change','cards.issue','reports.export'];
+export const capabilities={SUPER_ADMIN:[...common,...review,...manage,'organization.change','system.change','accounts.manage','audit.view','locations.manage','applications.delete'],STATE_ADMIN:[...common,...review,...manage,'organization.change','audit.view'],DISTRICT_ADMIN:[...common,...review,...manage],BLOCK_COORDINATOR:[...common,...review,'trainings.manage'],REVIEWER:[...common,...review],ID_CARD_OPERATOR:[...common,'cards.issue'],VIEWER:common};
 const globalOnly=new Set(['organization.change','system.change','accounts.manage','audit.view','locations.manage','applications.delete']);
 export function scopesFor(user,capability){
  if(!user?.active||user.facilitator_id)return [];

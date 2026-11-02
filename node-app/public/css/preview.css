@@ -10,3 +10,18 @@ body{background:#f4f7fa;color:#183248;font-family:system-ui,sans-serif}header{ba
 .private-document-preview{display:block;width:240px;max-width:100%;height:300px;border:1px solid #d5dfe7;border-radius:6px;background:#f5f7fa}
 
 .id-card-preview{display:block;width:480px;max-width:100%;height:360px;border:1px solid #d5dfe7;border-radius:6px}
+
+.training-choice-list{max-height:420px;overflow:auto;border:1px solid #d5dfe7;padding:1rem;border-radius:6px;margin:1rem 0}
+
+header nav{flex-wrap:wrap;justify-content:flex-end}@media(max-width:650px){header nav{justify-content:flex-start}}
+
+.training-roster td:last-child{min-width:260px}
+.training-roster form{display:flex;flex-direction:column;align-items:stretch;gap:8px}
+.training-roster form label{display:block}
+@media(max-width:650px){
+ .training-roster{min-width:0;width:100%}.training-roster thead{display:none}
+ .training-roster tbody,.training-roster tr,.training-roster td{display:block;width:100%;box-sizing:border-box}
+ .training-roster tr{border:1px solid #d5dfe7;border-radius:8px;padding:12px;margin:16px 0}
+ .training-roster td,.training-roster td:last-child{border:0;padding:8px 0;min-width:0}
+ .training-roster td::before{content:attr(data-label);display:block;font-weight:650;margin-bottom:5px;color:#397467}
+}

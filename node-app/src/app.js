@@ -1,3 +1,4 @@
+import {trainingRoutes} from './training-routes.js';
 import {facilitatorAccountRoutes} from './facilitator-account-routes.js';
 import {bilingual} from './registration-language.js';
 import express from 'express';
@@ -62,6 +63,7 @@ export async function createApp(db,cfg){
  app.use((req,res,next)=>res.locals.user?next():res.redirect('/accounts/login/'));
  app.use((req,res,next)=>res.locals.user.facilitator_id&&req.path!=='/accounts/password/'&&!req.path.startsWith('/my/')?res.redirect('/my/'):next());
  app.use(facilitatorAccountRoutes(db,cfg));
+ app.use(trainingRoutes(db,cfg));
  app.use(administrationRoutes(db,cfg));
  app.use(staffApplications(db,cfg));
  app.use(lifecycleStaff(db,cfg));

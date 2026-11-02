@@ -110,3 +110,15 @@ The login is linked one-to-one to an active approved facilitator and is not a st
 A Super Admin can reset the temporary password from the same facilitator page, which terminates previous sessions and requires another password change. Account deactivation/reactivation remains in **Administration → Accounts**. Facilitator personal accounts cannot receive staff role assignments; create a separate staff account for administrative duties.
 
 Schema 8 adds only `gmf_facilitator_accounts`. Existing schema 6 or 7 deployments add the required tables automatically at startup without changing existing records, passwords or role assignments.
+
+## Training assignments and attendance
+
+Staff use **Trainings / പരിശീലനങ്ങൾ → Create training** to record the title, trainer, date, start/end times (IST), venue/meeting information and state/district/block scope. Super Admin, State Admin and District Admin can manage sessions in their jurisdictions; Block Coordinators can manage their block. Session scope is fixed after creation. A district/block manager can assign and mark only their own facilitators even in a state-wide session, and cannot edit the state-wide session itself.
+
+Open the session and select up to 50 active approved facilitators per batch under **Assign facilitators**. Search by name, ID or panchayat; repeat to assign the next batch. Existing assignments are not duplicated. Initial attendance is always **Not marked (PENDING)**. On or after the training date, an authorized manager records **Present, Absent, Late or Excused**, with an optional arrival time for present/late and a required verification note. Bulk marking applies only to selected unmarked assignments; corrections to recorded attendance use the individual row with revision checks and a reason. Assignment, cancellation and attendance actions are audited. Recorded attendance prevents changing the session date/time; create a new session instead. Completing a session never invents attendance for unmarked participants.
+
+Facilitators see only their own assigned training details and attendance under **My trainings / എന്റെ പരിശീലനങ്ങൾ**. They cannot assign themselves or mark attendance. Staff open **Facilitators → member → Training and attendance history** for an individual history and totals. Cancelled assignments remain visible as history. Future attendance and marking on cancelled sessions are blocked. Participant lists and reports respect current staff jurisdiction.
+
+The session links to **Reports → Training assignments and attendance** for Excel/PDF/CSV exports, with the date range applied to the training date. Attendance notes are visible only to authorized training managers and the individual facilitator. A personal account is optional for assignment: registered approved facilitators without logins can still be assigned and recorded by staff.
+
+Schema 9 adds `gmf_trainings` and `gmf_training_assignments`; schema 6, 7 and 8 deployments add these tables automatically at startup. Existing application references, facilitator IDs, card numbers and attendance-independent membership statuses are unchanged.
