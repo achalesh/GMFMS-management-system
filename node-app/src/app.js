@@ -1,3 +1,5 @@
+import {newsRoutes,newsUploadMiddleware} from './news-routes.js';
+import {newsStaff} from './news.js';
 import {trainingRoutes} from './training-routes.js';
 import {facilitatorAccountRoutes} from './facilitator-account-routes.js';
 import {bilingual} from './registration-language.js';
@@ -21,7 +23,7 @@ export async function createApp(db,cfg){
  const app=express(), dummy=await hashPassword(randomBytes(32).toString('hex'));
  app.disable('x-powered-by');app.set('trust proxy',cfg.proxy);
  app.set('view engine','ejs');app.set('views',fileURLToPath(new URL('../views',import.meta.url)));
- app.use(helmet({referrerPolicy:{policy:'same-origin'},contentSecurityPolicy:{directives:{'upgrade-insecure-requests':cfg.production?[]:null}}}));
+ app.use(helmet({referrerPolicy:{policy:'same-origin'},contentSecurityPolicy:{directives:{'upgrade-insecure-requests':cfg.production?[]:null,'media-src':["'self'",'blob:']}}}));
  app.use('/static',express.static(fileURLToPath(new URL('../public',import.meta.url)),{dotfiles:'deny'}));
  app.use((req,res,next)=>{res.set('Cache-Control','no-store');next();});
  app.get('/health/live/',(req,res)=>res.json({status:'ok'}));
@@ -34,9 +36,11 @@ export async function createApp(db,cfg){
  res.locals.csrf=csrfToken(req.session);
  res.locals.organization=(await settings(db,'organization')).data;
  res.locals.bi=bilingual;res.locals.registrationBilingual=req.path.startsWith('/register/');
+ res.locals.canNews=newsStaff(res.locals.user);
  res.locals.can=cap=>can(res.locals.user,cap);
  next();
  });
+ app.use(newsUploadMiddleware(db,cfg));
  app.use(uploadMiddleware(db,cfg));
  app.use((req,res,next)=>{
  if(!['GET','HEAD','OPTIONS'].includes(req.method)&&(!validCsrf(req.session,req.body?.csrf)||(req.headers.origin&&req.headers.origin!==cfg.origin)))return res.status(403).send('Invalid form. Reload the page and try again.');
@@ -62,6 +66,7 @@ export async function createApp(db,cfg){
  app.use(correctionPublic(db,cfg));
  app.use((req,res,next)=>res.locals.user?next():res.redirect('/accounts/login/'));
  app.use((req,res,next)=>res.locals.user.facilitator_id&&req.path!=='/accounts/password/'&&!req.path.startsWith('/my/')?res.redirect('/my/'):next());
+ app.use(newsRoutes(db,cfg));
  app.use(facilitatorAccountRoutes(db,cfg));
  app.use(trainingRoutes(db,cfg));
  app.use(administrationRoutes(db,cfg));

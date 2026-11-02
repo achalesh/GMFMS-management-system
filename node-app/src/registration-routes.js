@@ -12,7 +12,7 @@ import {newDraft,getDraft,saveStep,submit,applicationSelect,getApplication,dupli
 export function uploadMiddleware(db,cfg){
  const parse=multer({storage:multer.memoryStorage(),limits:{fileSize:maxFileBytes,files:5,fields:80,fieldSize:4096,parts:85}}).fields(slots.map(name=>({name,maxCount:1})));let inFlight=0;
  return async(req,res,next)=>{
- if(req.method!=='POST'||!req.is('multipart/form-data'))return next();
+ if(req.newsMultipart||req.method!=='POST'||!req.is('multipart/form-data'))return next();
  const correction=['/corrections/edit/','/corrections/edit'].includes(req.path);
  if(!correction&&!['/register/5/','/register/5'].includes(req.path))return res.sendStatus(415);
  if(req.headers.origin&&req.headers.origin!==cfg.origin)return res.sendStatus(403);
