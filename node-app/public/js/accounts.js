@@ -15,7 +15,7 @@ for (const form of document.querySelectorAll('[data-role-assignment]')) {
   const role = form.elements.role, scope = form.elements.scope;
   const district = form.elements.district, block = form.elements.block;
   function update() {
-    const fixed = {ADMIN: 'STATE', SUPER_ADMIN: 'STATE', STATE_ADMIN: 'STATE', DISTRICT_ADMIN: 'DISTRICT', BLOCK_COORDINATOR: 'BLOCK'}[role.value];
+    const fixed = {ADMIN: 'STATE', SUPER_ADMIN: 'STATE', STATE_ADMIN: 'STATE', DISTRICT_ADMIN: 'DISTRICT', DISTRICT_COORDINATOR: 'DISTRICT', BLOCK_COORDINATOR: 'BLOCK'}[role.value];
     for (const option of scope.options) option.disabled = Boolean(fixed && option.value !== fixed);
     if (fixed) scope.value = fixed;
     district.disabled = scope.value === 'STATE';

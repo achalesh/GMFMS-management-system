@@ -2,14 +2,14 @@ const common=['trainings.view','dashboard.view','facilitators.view','locations.v
 const review=['news.view','news.review','applications.view','applications.review','contacts.view'];
 const manage=['trainings.manage','applications.approve','facilitators.change','cards.issue','reports.export'];
 export const capabilities={SUPER_ADMIN:[...common,...review,...manage,'organization.change','system.change','accounts.manage','audit.view','locations.manage','applications.delete'],STATE_ADMIN:[...common,...review,...manage,'organization.change','audit.view'],DISTRICT_ADMIN:[...common,...review,...manage],BLOCK_COORDINATOR:[...common,...review,'trainings.manage'],REVIEWER:[...common,...review],ID_CARD_OPERATOR:[...common,'cards.issue'],VIEWER:common};
-Object.assign(capabilities,{ADMIN:[...capabilities.SUPER_ADMIN],MANAGER:[...common,...review,...manage],EDITOR:[...common,'news.view','news.review'],USER:[...common]});
+Object.assign(capabilities,{ADMIN:[...capabilities.SUPER_ADMIN],MANAGER:[...common,...review,...manage],DISTRICT_COORDINATOR:[...common,...review,'trainings.manage'],EDITOR:[...common,'news.view','news.review'],USER:[...common]});
 const globalOnly=new Set(['organization.change','system.change','accounts.manage','audit.view','locations.manage','applications.delete']);
 export function scopesFor(user,capability){
  if(!user?.active||user.facilitator_id)return [];
  return (user.scopes||[]).filter(s=>{
  if(!s.active||!capabilities[s.role]?.includes(capability))return false;
  if(['ADMIN','SUPER_ADMIN','STATE_ADMIN'].includes(s.role)&&s.scope!=='STATE')return false;
- if(s.role==='DISTRICT_ADMIN'&&s.scope!=='DISTRICT')return false;
+ if(['DISTRICT_ADMIN','DISTRICT_COORDINATOR'].includes(s.role)&&s.scope!=='DISTRICT')return false;
  if(s.role==='BLOCK_COORDINATOR'&&s.scope!=='BLOCK')return false;
  if(s.scope==='STATE')return !s.district_code&&!s.block_code;
  if(!s.district_code||!s.district_active||!s.state_active)return false;

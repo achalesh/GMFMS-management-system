@@ -1,8 +1,8 @@
 # Gramaswaraj application user roles and assignment guide
 
-Version 1.0 | 2 November 2026
+Version 1.1 | 2 November 2026
 
-Prepared for Gramaswaraj administrators and staff. This guide describes the implemented Admin, Manager, Editor and User roles, how to assign them, and how they interact with facilitator personal logins. It applies after deploying the corresponding application update to register.gramaswaraj.in.
+Prepared for Gramaswaraj administrators and staff. This guide describes the implemented Admin, Manager, District Coordinator, Editor and User roles, how to assign them, and how they interact with facilitator personal logins. It applies after deploying the corresponding application update to register.gramaswaraj.in.
 
 ## 1 Role model
 
@@ -10,7 +10,7 @@ An account identifies a person who signs in. A role grants a set of actions. A s
 
 Use one account per person. Choose the smallest role and geographical scope needed for that person's duties. Creating a staff account alone does not grant staff permissions. Accounts must be active, and location assignments must refer to active locations.
 
-The four standard staff roles are Admin, Manager, Editor and User. Facilitator personal access is a separate account type linked to one approved facilitator; it is not the User staff role.
+The five standard staff roles are Admin, Manager, District Coordinator, Editor and User. Facilitator personal access is a separate account type linked to one approved facilitator; it is not the User staff role.
 
 ## 2 Standard role responsibilities
 
@@ -27,6 +27,12 @@ Admin cannot be assigned district or block scope. The initial administrator acco
 Manager handles application review and approval, facilitator maintenance, ID cards, reports, training management and news review within the assigned area. A Manager can review applicant contact details as part of the review process, request corrections, and perform permitted application decisions. Managers can organize training, assign facilitators and record attendance.
 
 A Manager cannot create staff accounts, assign roles, reset another user's password, change organization or system settings, manage the location directory, view the administration audit page or permanently delete applications. Managers can have state, district or block scope.
+
+### District Coordinator
+
+District Coordinator supports operations across one district. It grants application review and applicant contact review, news review, basic dashboard, facilitator and location viewing, and training viewing and management. The coordinator can create district or block training within the assigned district, assign eligible facilitators and record attendance.
+
+It does not grant application approval, facilitator modification, ID card issuance, report export, account or role management, settings, audit access, location management or permanent application deletion. Use Manager if approval and broader operational management are required. District Coordinator requires district scope; state and block scope are rejected by the server.
 
 ### Editor
 
@@ -46,25 +52,25 @@ User can have state, district or block scope. It is suitable for staff who need 
 
 Yes means the role grants the capability, subject to location scope, record state and other application checks. No means the role does not grant it. Multiple active assignments can increase an account's effective permissions.
 
-| Feature or action | Admin | Manager | Editor | User |
-| --- | --- | --- | --- | --- |
-| View dashboard and location information | Yes | Yes | Yes | Yes |
-| View facilitator records | Yes | Yes | Yes | Yes |
-| View training information | Yes | Yes | Yes | Yes |
-| Review applications and applicant contacts | Yes | Yes | No | No |
-| Approve applications | Yes | Yes | No | No |
-| Modify facilitator records | Yes | Yes | No | No |
-| Issue facilitator ID cards | Yes | Yes | No | No |
-| Export reports | Yes | Yes | No | No |
-| Create training and assign participants | Yes | Yes | No | No |
-| Record training attendance | Yes | Yes | No | No |
-| Review news and request changes | Yes | Yes | Yes | No |
-| Create accounts and assign staff roles | Yes | No | No | No |
-| Reset passwords and control account access | Yes | No | No | No |
-| Change organization and system settings | Yes | No | No | No |
-| Manage location directory | Yes | No | No | No |
-| View administration audit page | Yes | No | No | No |
-| Permanently delete eligible applications | Yes | No | No | No |
+| Feature or action | Admin | Manager | District Coordinator | Editor | User |
+| --- | --- | --- | --- | --- | --- |
+| View dashboard and location information | Yes | Yes | Yes | Yes | Yes |
+| View facilitator records | Yes | Yes | Yes | Yes | Yes |
+| View training information | Yes | Yes | Yes | Yes | Yes |
+| Review applications and applicant contacts | Yes | Yes | Yes | No | No |
+| Approve applications | Yes | Yes | No | No | No |
+| Modify facilitator records | Yes | Yes | No | No | No |
+| Issue facilitator ID cards | Yes | Yes | No | No | No |
+| Export reports | Yes | Yes | No | No | No |
+| Create training and assign participants | Yes | Yes | Yes | No | No |
+| Record training attendance | Yes | Yes | Yes | No | No |
+| Review news and request changes | Yes | Yes | Yes | Yes | No |
+| Create accounts and assign staff roles | Yes | No | No | No | No |
+| Reset passwords and control account access | Yes | No | No | No | No |
+| Change organization and system settings | Yes | No | No | No | No |
+| Manage location directory | Yes | No | No | No | No |
+| View administration audit page | Yes | No | No | No | No |
+| Permanently delete eligible applications | Yes | No | No | No | No |
 
 All signed-in users can change their own password. Viewing a module does not grant every download, export or action available within it. The matrix describes authorization capabilities; some navigation links may still be visible when opening them results in access denied.
 
@@ -76,7 +82,7 @@ All signed-in users can change their own password. Viewing a module does not gra
 | District | Records belonging to the selected district | District only |
 | Block | Records belonging to the selected block in its district | District and matching block |
 
-The form restricts Admin to state scope, filters blocks by district and requires the appropriate location fields. The server independently validates assignments even if browser scripting is disabled. An inactive district, block or parent state cannot provide an active location-based assignment.
+The form restricts District Coordinator to district scope and Admin to state scope, filters blocks by district and requires the appropriate location fields. The server independently validates assignments even if browser scripting is disabled. An inactive district, block or parent state cannot provide an active location-based assignment.
 
 Example: a Manager assigned to Thrissur district can approve eligible applications within Thrissur, but not applications in another district. Adding a state-level User assignment does not extend the Manager's approval permission statewide. Role and location are evaluated together for each action.
 
@@ -141,7 +147,7 @@ Existing assignments remain valid; this release does not migrate or remove them.
 | ID_CARD_OPERATOR | Basic viewing plus card issuance |
 | VIEWER | Same basic viewing capabilities as User |
 
-Use the four standard roles for new assignments unless a narrower specialist role is specifically needed. Do not replace an existing specialist assignment without checking which permissions the replacement would add or remove.
+Use the five standard roles for new assignments unless a narrower specialist role is specifically needed. Do not replace an existing specialist assignment without checking which permissions the replacement would add or remove.
 
 ## 10 Recommended assignment examples
 
@@ -151,6 +157,7 @@ Use the four standard roles for new assignments unless a narrower specialist rol
 | Statewide operations coordinator | Manager | State |
 | District application and facilitator coordinator | Manager | District |
 | Block operations coordinator who must approve applications | Manager | Block |
+| District operations without application approval | District Coordinator | District |
 | District news review team | Editor | District |
 | Staff member needing read-only district visibility | User | District |
 | Registered facilitator submitting news and attending training | Personal facilitator login | Own facilitator record |
