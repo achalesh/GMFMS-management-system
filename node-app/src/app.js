@@ -43,7 +43,7 @@ export async function createApp(db,cfg){
  app.use(newsUploadMiddleware(db,cfg));
  app.use(uploadMiddleware(db,cfg));
  app.use((req,res,next)=>{
- if(!['GET','HEAD','OPTIONS'].includes(req.method)&&(!validCsrf(req.session,req.body?.csrf)||(req.headers.origin&&req.headers.origin!==cfg.origin)))return res.status(403).send('Invalid form. Reload the page and try again.');
+ if(!['GET','HEAD','OPTIONS'].includes(req.method)&&(!validCsrf(req.session,req.get('X-CSRF-Token')||req.body?.csrf)||(req.headers.origin&&req.headers.origin!==cfg.origin)))return res.status(403).send('Invalid form. Reload the page and try again.');
  next();
  });
  const audit=(id,action)=>db.run('INSERT INTO gmf_audit(id,user_id,action,created_at) VALUES (?,?,?,?)',[randomUUID(),id,action,Date.now()]);

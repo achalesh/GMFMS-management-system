@@ -2,7 +2,8 @@ import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {processUpload} from './uploads.js';
 import {FormError} from './registration-fields.js';
-export const maxNewsVideoBytes=10*1024*1024;
+export const maxNewsVideoBytes=1024*1024*1024;
+export const maxNewsDirectVideoBytes=10*1024*1024;
 export const maxNewsImageBytes=5*1024*1024;
 export function mp4Video(buffer){
  const invalid=()=>{throw new FormError('Use a valid MP4 video with H.264 encoding. / H.264 MP4 വീഡിയോ തിരഞ്ഞെടുക്കുക.');};
@@ -23,7 +24,7 @@ export async function processNewsMedia(file){
  if(!['.jpg','.jpeg','.png'].includes(extension)||file.buffer.length>maxNewsImageBytes)throw new FormError('Images must be JPG/PNG, up to 5 MB each. / ഓരോ ചിത്രവും പരമാവധി 5 MB JPG/PNG ആയിരിക്കണം.');
  const result=await processUpload(file,false,[50,50,1]);return {kind:'IMAGE',mime:'image/jpeg',body:Buffer.from(result.body,'base64'),sha256:result.sha256};
  }
- if(file.fieldname!=='video'||extension!=='.mp4'||!['video/mp4','application/octet-stream'].includes(file.mimetype)||file.buffer.length>maxNewsVideoBytes)throw new FormError('Use one MP4 (H.264) video, up to 10 MB. / പരമാവധി 10 MB MP4 വീഡിയോ ഉപയോഗിക്കുക.');
+ if(file.fieldname!=='video'||extension!=='.mp4'||!['video/mp4','application/octet-stream'].includes(file.mimetype)||file.buffer.length>maxNewsDirectVideoBytes)throw new FormError('For videos above 10 MB, use the chunked uploader (up to 1 GB). / വലിയ വീഡിയോകൾക്കായി 1 GB അപ്‌ലോഡർ ഉപയോഗിക്കുക.');
  mp4Video(file.buffer);return {kind:'VIDEO',mime:'video/mp4',body:file.buffer,sha256:createHash('sha256').update(file.buffer).digest('hex')};
 }
 export function sendNewsMedia(req,res,media,filename){

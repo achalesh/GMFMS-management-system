@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import {fileURLToPath} from 'node:url';
 import {spawnSync} from 'node:child_process';
-// Explicit first-release switches. The server also supports the additive schema 6/7/8/9-to-10 upgrade.
+// Explicit first-release switches. The server also supports the additive schema 6–10-to-11 upgrade.
 for(const [flag,file] of [['RUN_MIGRATIONS','migrate.js'],['BOOTSTRAP_ADMIN','create-admin.js']]){
  if(process.env[flag]==='true'){
   const result=spawnSync(process.execPath,[fileURLToPath(new URL(file,import.meta.url))],{stdio:'inherit',env:process.env});

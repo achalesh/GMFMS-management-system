@@ -1,4 +1,6 @@
 import path from 'node:path';
+import {homedir} from 'node:os';
+import {fileURLToPath} from 'node:url';
 import {randomBytes} from 'node:crypto';
 export function config(env=process.env){
  const production=env.NODE_ENV==='production';
@@ -11,5 +13,11 @@ export function config(env=process.env){
  if(!Number.isInteger(proxy)||proxy<0||proxy>2)throw Error('Invalid proxy hop count');
  const port=Number(env.PORT||3000);
  if(!Number.isInteger(port)||port<0||port>65535)throw Error('Invalid port');
- return {production,origin:origin.origin,secret,proxy,port,mysql:env.MYSQL_URL,ssl:env.MYSQL_SSL==='true',sqlite:path.resolve(env.SQLITE_PATH||'var/development.sqlite')};
+ const sqlite=path.resolve(env.SQLITE_PATH||'var/development.sqlite');
+ if(production&&env.NEWS_MEDIA_DIR&&!path.isAbsolute(env.NEWS_MEDIA_DIR))throw Error('NEWS_MEDIA_DIR must be an absolute private persistent path');
+ const newsMediaDir=path.resolve(env.NEWS_MEDIA_DIR||(production?path.join(homedir(),'.gramaswaraj','news-media'):path.join(path.dirname(sqlite),'news-media')));
+ const appRoot=path.resolve(fileURLToPath(new URL('..',import.meta.url)));
+ if(production&&(newsMediaDir===appRoot||newsMediaDir.startsWith(appRoot+path.sep)))throw Error('NEWS_MEDIA_DIR must be outside the versioned application directory');
+ if(production&&newsMediaDir.split(/[\\/]/).some(part=>['public_html','htdocs'].includes(part.toLowerCase())))throw Error('News media storage must be outside the public web root');
+ return {production,origin:origin.origin,secret,proxy,port,mysql:env.MYSQL_URL,ssl:env.MYSQL_SSL==='true',sqlite,newsMediaDir};
 }

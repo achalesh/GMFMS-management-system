@@ -1,6 +1,8 @@
-export const schemaVersion=10;
+export const schemaVersion=11;
 export async function migrate(db){
  const tables=[
+ `CREATE TABLE IF NOT EXISTS gmf_news_file_uploads (id VARCHAR(36) PRIMARY KEY, user_id VARCHAR(36) NOT NULL, original_name VARCHAR(255) NOT NULL, expected_size BIGINT NOT NULL, received_size BIGINT NOT NULL DEFAULT 0, state VARCHAR(20) NOT NULL DEFAULT 'UPLOADING', sha256 VARCHAR(64) NOT NULL DEFAULT '', attached_news_id VARCHAR(36), lease VARCHAR(36), lease_until BIGINT NOT NULL DEFAULT 0, expires_at BIGINT NOT NULL, created_at BIGINT NOT NULL)`,
+ `CREATE TABLE IF NOT EXISTS gmf_news_file_media (media_id VARCHAR(36) PRIMARY KEY, upload_id VARCHAR(36) NOT NULL UNIQUE)`,
  `CREATE TABLE IF NOT EXISTS gmf_news (id VARCHAR(36) PRIMARY KEY, number VARCHAR(40) NOT NULL UNIQUE, facilitator_id VARCHAR(36) NOT NULL, author_name VARCHAR(150) NOT NULL, panchayat_code VARCHAR(30) NOT NULL, heading VARCHAR(200) NOT NULL, content MEDIUMTEXT NOT NULL, hashtags TEXT NOT NULL, programme_date VARCHAR(10) NOT NULL, language VARCHAR(20) NOT NULL, status VARCHAR(30) NOT NULL DEFAULT 'DRAFT', revision INTEGER NOT NULL DEFAULT 1, created_at BIGINT NOT NULL, updated_at BIGINT NOT NULL, submitted_at BIGINT)`,
  `CREATE TABLE IF NOT EXISTS gmf_news_media (id VARCHAR(36) PRIMARY KEY, news_id VARCHAR(36) NOT NULL, kind VARCHAR(10) NOT NULL, mime VARCHAR(40) NOT NULL, size INTEGER NOT NULL, sha256 VARCHAR(64) NOT NULL, body MEDIUMBLOB NOT NULL, position INTEGER NOT NULL)`,
  `CREATE TABLE IF NOT EXISTS gmf_news_events (id VARCHAR(36) PRIMARY KEY, news_id VARCHAR(36) NOT NULL, actor_id VARCHAR(36) NOT NULL, action VARCHAR(40) NOT NULL, from_status VARCHAR(30) NOT NULL, to_status VARCHAR(30) NOT NULL, note TEXT NOT NULL, created_at BIGINT NOT NULL)`,
