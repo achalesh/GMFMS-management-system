@@ -16,6 +16,8 @@ test('account permissions, revision checks, forced password change and session i
  await assert.rejects(accountAction(db,'admin',{action:'active',user_id:'admin',revision:1,reason:'Self disable'}));
  await accountAction(db,'admin',{action:'assign',user_id:id,revision:1,role:'VIEWER',scope:'STATE',reason:'Viewer access'});
  assert(can(await loadUser(db,id),'facilitators.view'));
+ await assert.rejects(accountAction(db,'admin',{action:'assign',user_id:id,revision:2,role:'VIEWER',scope:'STATE',reason:'Duplicate access'}),/already assigned/);
+ assert.equal((await db.all('SELECT id FROM gmf_scopes WHERE user_id=? AND active=1',[id])).length,1);
  await assert.rejects(accountAction(db,'admin',{action:'active',user_id:id,revision:1,reason:'Stale'}),e=>e.status===409);
  await db.run('INSERT INTO gmf_sessions(id,payload,expires_at) VALUES (?,?,?)',['staff-session',JSON.stringify({userId:id}),Date.now()+100000]);
  await assert.rejects(changePassword(db,id,{current_password:'incorrect',password:'new-password-12345'}));
