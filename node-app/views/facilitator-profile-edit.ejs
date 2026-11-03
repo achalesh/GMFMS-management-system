@@ -1,0 +1,33 @@
+<%- include('header') %>
+<section class="panel">
+<h1>Edit my profile / വിവരങ്ങൾ പുതുക്കുക</h1>
+<p>Changes to professional details, equipment, social links and public display consent take effect immediately. Your approved name, contacts, photograph, location and ID card number remain protected.</p>
+<p>തൊഴിൽ വിവരങ്ങൾ, കഴിവുകൾ, ഭാഷകൾ, ഉപകരണങ്ങൾ, സോഷ്യൽ മീഡിയ ലിങ്കുകൾ എന്നിവ നേരിട്ട് പുതുക്കാം. പേര്, ഫോൺ, ഇമെയിൽ, ഫോട്ടോ, പഞ്ചായത്ത് എന്നിവ മാറ്റാൻ അഡ്മിനിസ്ട്രേറ്ററെ ബന്ധപ്പെടുക.</p>
+<% if(error){ %><p role="alert" class="alert alert-danger"><%= error %></p><% } %>
+<% if(pending){ %><p class="alert alert-warning">An administrator correction is pending. Complete it before editing here. / തിരുത്തൽ നടപടികൾ പൂർത്തിയാക്കിയ ശേഷം വിവരങ്ങൾ പുതുക്കാം.</p><% } %>
+<% if(!mayEdit){ %><p class="alert alert-warning">Only active approved facilitators can save profile changes.</p><% } %>
+<form method="post" action="/my/profile/edit/">
+<input type="hidden" name="csrf" value="<%= csrf %>">
+<input type="hidden" name="revision" value="<%= application.revision %>">
+<fieldset <%= pending||!mayEdit?'disabled':'' %>>
+<% [3,4].forEach(step=>{ %>
+<h2 class="mt-4"><%= step===3?'Professional details / തൊഴിൽ വിവരങ്ങൾ':'Equipment and social profiles / ഉപകരണങ്ങളും സോഷ്യൽ മീഡിയയും' %></h2>
+<% fields[step].forEach(field=>{const value=typeof values[field.name]==='string'?values[field.name]:''; %>
+<div class="mb-3">
+<% if(field.multiple){const selected=Array.isArray(values[field.name])?values[field.name]:[values[field.name]]; %>
+<fieldset><legend class="fs-6"><%= bi(field.label) %><%= field.required?' *':'' %></legend>
+<% field.options.forEach(option=>{ %><label class="consent"><input type="checkbox" name="<%= field.name %>" value="<%= option %>" <%= selected.includes(option)?'checked':'' %>> <%= bi(option) %></label><% }) %>
+</fieldset>
+<% }else{ %>
+<label for="profile-<%= field.name %>"><%= bi(field.label) %><%= field.required?' *':'' %></label>
+<% if(field.type==='textarea'){ %><textarea class="form-control" id="profile-<%= field.name %>" name="<%= field.name %>" maxlength="<%= field.max %>" <%= field.required?'required':'' %>><%= value %></textarea>
+<% }else{ %><input class="form-control" id="profile-<%= field.name %>" name="<%= field.name %>" type="<%= field.type %>" value="<%= value %>" maxlength="<%= field.max %>" <%- field.type==='number'?'min="0" max="80"':'' %> <%= field.required?'required':'' %>><% } %>
+<% } %></div><% }) %><% }) %>
+<h2>Public display consent / പൊതുവായി പ്രദർശിപ്പിക്കാനുള്ള സമ്മതം</h2>
+<p>These details appear publicly only when both you and the organization permit it. Uncheck to withdraw consent. / സമ്മതം പിൻവലിക്കാൻ ടിക്ക് ഒഴിവാക്കുക.</p>
+<% [['public_mobile','Display my mobile number / മൊബൈൽ നമ്പർ'],['public_email','Display my email / ഇമെയിൽ'],['public_social','Display my social links / സോഷ്യൽ മീഡിയ ലിങ്കുകൾ']].forEach(([key,label])=>{ %>
+<label class="consent"><input type="checkbox" name="<%= key %>" <%= values[key]==='on'?'checked':'' %>> <%= label %></label><% }) %>
+<button class="btn btn-primary mt-3">Save profile / സേവ് ചെയ്യുക</button>
+</fieldset>
+<a class="btn btn-outline-secondary mt-3" href="/my/">Back to my profile / തിരികെ</a>
+</form></section><%- include('footer') %>

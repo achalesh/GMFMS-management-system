@@ -177,3 +177,12 @@ If a role seems too powerful, check for another assignment or the initial superu
 Deploy the latest main branch with Hostinger's existing node-app configuration. These roles use the existing scope table and require no database schema version change. Validate with separate test accounts for each role and check both allowed actions and rejected actions outside the assigned area before allocating production responsibilities.
 
 Implementation reference: node-app/src/policies.js defines capabilities and scope evaluation; node-app/src/administration.js validates assignments, records reasons and protects the final administrator. Authorization is enforced on the server, not merely by hiding interface controls.
+
+
+## 13 Facilitator profile updates
+
+Active approved facilitators can use Edit my profile on their home page to update occupation, qualification, organization, designation, experience, skills, languages, equipment and social links. Public display consent for mobile, email and social links can be granted or withdrawn. Publication still requires the organization policy to permit it. These updates take effect immediately and record previous and new values in the audit log.
+
+The form cannot change name, date of birth, blood group, contact numbers, email address, residential address, location, photographs, documents, application status, appointment or ID numbers. These changes continue through administrator-controlled workflows. Profile editing pauses while an approved-record correction is open or submitted, to avoid overwriting reviewed changes. Concurrent edits require reloading the latest profile.
+
+The current authorized ID card preview and PDF download controls appear near the top of My profile. Cards that are outdated, inactive, revoked or expired are not offered as current cards. Ordinary profile updates preserve the application reference, facilitator number and ID card number and do not alter the approved card content.
